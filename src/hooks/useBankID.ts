@@ -16,23 +16,25 @@ enum LoginStatus {
 const getFetcher = (url: string) => axios.get(url).then((res) => res.data);
 const postFetcher = (url: string) => axios.post(url).then((res) => res.data);
 
-const useBankID = () => {
+const useBankID = (baseUrl: string) => {
+    baseUrl = baseUrl.replace(/\/$/, "");
+
     const [orderRef, setOrderRef] = useState<string>("");
     const [loginStatus, setLoginStatus] = useState<LoginStatus>(LoginStatus.None);
     const [qr, setQr] = useState<string>("");
     const [userData, setUserData] = useState<any>(null);
 
-    const authenticateCall = useSWRMutation(`https://foo.com/authenticate`, postFetcher);
-    const cancelCall = useSWRMutation(`https://foo.com/cancel?orderRef=${orderRef}`, postFetcher);
+    const authenticateCall = useSWRMutation(`${baseUrl}/authenticate`, postFetcher);
+    const cancelCall = useSWRMutation(`${baseUrl}/cancel?orderRef=${orderRef}`, postFetcher);
 
     const {
         data: collectData,
-        error
-    } = useSWR([LoginStatus.Polling, LoginStatus.UserSign].includes(loginStatus) ? `https://foo.com/collect?orderRef=${orderRef}` : null, getFetcher, {
+        error: collectError
+    } = useSWR([LoginStatus.Polling, LoginStatus.UserSign].includes(loginStatus) ? `${baseUrl}/collect?orderRef=${orderRef}` : null, getFetcher, {
         dedupingInterval: 0,
         refreshInterval: 2000,
     });
-    const {data: qrData} = useSWR(loginStatus === LoginStatus.Polling ? `https://foo.com/qr?orderRef=${orderRef}` : null, getFetcher, {
+    const {data: qrData} = useSWR(loginStatus === LoginStatus.Polling ? `${baseUrl}/qr?orderRef=${orderRef}` : null, getFetcher, {
         dedupingInterval: 0,
         refreshInterval: 1000,
     });

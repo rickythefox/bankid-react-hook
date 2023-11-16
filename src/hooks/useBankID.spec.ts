@@ -49,7 +49,7 @@ afterEach(() => {
 
 describe('useBankID', () => {
     it('happy flow works', async () => {
-        const {result, rerender} = renderHook(() => useBankID());
+        const {result, rerender} = renderHook(() => useBankID("https://foo.com/api"));
 
         // Can start login
         expect(result.current.start).toBeTruthy();
