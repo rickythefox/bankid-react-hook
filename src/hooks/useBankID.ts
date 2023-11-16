@@ -24,9 +24,17 @@ const useBankID = (baseUrl: string) => {
     const [qr, setQr] = useState<string>("");
     const [userData, setUserData] = useState<any>(null);
 
-    const authenticateCall = useSWRMutation(`${baseUrl}/authenticate`, postFetcher);
-    const cancelCall = useSWRMutation(`${baseUrl}/cancel?orderRef=${orderRef}`, postFetcher);
-
+    const {
+        trigger: callAuthenticate,
+        reset: resetAuthenticate,
+        data: authenticateData,
+        error: authenticateError,
+    } = useSWRMutation(`${baseUrl}/authenticate`, postFetcher);
+    const {
+        trigger: callCancel,
+        data: cancelData,
+        error: cancelError,
+    } = useSWRMutation(`${baseUrl}/cancel?orderRef=${orderRef}`, postFetcher);
     const {
         data: collectData,
         error: collectError
@@ -34,15 +42,18 @@ const useBankID = (baseUrl: string) => {
         dedupingInterval: 0,
         refreshInterval: 2000,
     });
-    const {data: qrData} = useSWR(loginStatus === LoginStatus.Polling ? `${baseUrl}/qr?orderRef=${orderRef}` : null, getFetcher, {
+    const {
+        data: qrData,
+        error: qrError
+    } = useSWR(loginStatus === LoginStatus.Polling ? `${baseUrl}/qr?orderRef=${orderRef}` : null, getFetcher, {
         dedupingInterval: 0,
         refreshInterval: 1000,
     });
 
     useEffect(() => {
-        if (!authenticateCall?.data?.orderRef) return;
+        if (!authenticateData?.orderRef) return;
 
-        setOrderRef(authenticateCall.data.orderRef);
+        setOrderRef(authenticateData.orderRef);
 
         const timeoutId = setTimeout(() => {
             setLoginStatus(LoginStatus.Polling);
@@ -51,7 +62,7 @@ const useBankID = (baseUrl: string) => {
         return () => {
             clearTimeout(timeoutId);
         };
-    }, [authenticateCall?.data?.orderRef]);
+    }, [authenticateData?.orderRef]);
 
     useEffect(() => {
         if (!collectData) return;
@@ -60,13 +71,13 @@ const useBankID = (baseUrl: string) => {
             setUserData({...collectData.completionData.user, token: collectData.token});
             setOrderRef("");
             setLoginStatus(LoginStatus.Complete);
-            authenticateCall.reset();
+            resetAuthenticate();
         }
 
         if (collectData.hintCode === "userSign") {
             setLoginStatus(LoginStatus.UserSign);
         }
-    }, [authenticateCall, collectData]);
+    }, [resetAuthenticate, collectData]);
 
     useEffect(() => {
         setQr(qrData?.qr || "");
@@ -74,15 +85,15 @@ const useBankID = (baseUrl: string) => {
 
     const start = async () => {
         if (!orderRef) {
-            authenticateCall.trigger();
+            await callAuthenticate();
             setLoginStatus(LoginStatus.Starting);
         }
     };
 
     const cancel = async () => {
         if (orderRef) {
-            cancelCall.trigger();
-            authenticateCall.reset();
+            await callCancel();
+            resetAuthenticate();
             setOrderRef("");
             setLoginStatus(LoginStatus.None);
         }

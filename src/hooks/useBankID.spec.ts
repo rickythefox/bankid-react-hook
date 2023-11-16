@@ -55,7 +55,7 @@ describe('useBankID', () => {
         expect(result.current.start).toBeTruthy();
 
         // Trigger login
-        act(() => void result.current.start!());
+        await act(() => result.current.start!());
 
         // Can't start login while logging in
         expect(result.current.start).toBeFalsy();
