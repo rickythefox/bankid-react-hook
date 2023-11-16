@@ -8,7 +8,7 @@ A React hook for using the Swedish BankID.
 
 Adapt to your own backend implementation.
 
-Only happy flow works for now, error handling to be added. 
+Happy flow works for now, error handling is being worked on. 
 
 ### Running the demo
 Uses vite for bundling, pnpm for package management.

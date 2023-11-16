@@ -3,20 +3,15 @@
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from "@testing-library/react";
-import handlers from "../mocks/mockApi.ts";
+import { authenticate401Error, authenticateNetworkError, collect401Error, collectNetworkError, defaultHandlers } from "../mocks/mockApi.ts";
 import { setupServer } from "msw/node";
 import useBankID from "./useBankID.ts";
 
-const waitForValueToChange = async <T, >(getValue: () => T) => {
-    const original = getValue();
-
-    await waitFor(async () => {
-        expect(await original).not.toEqual(await getValue());
-    });
-};
+let server: ReturnType<typeof setupServer>;
 
 beforeAll(() => {
-    setupServer(...handlers).listen();
+    server = setupServer(...defaultHandlers);
+    server.listen();
 });
 
 beforeEach(() => {
@@ -45,6 +40,7 @@ beforeEach(() => {
 afterEach(() => {
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
+    server.resetHandlers();
 });
 
 describe('useBankID', () => {
@@ -92,5 +88,83 @@ describe('useBankID', () => {
 
         // Can log in again
         expect(result.current.start).toBeTruthy();
+    });
+
+    it("can cancel login", async () => {
+        const {result, rerender} = renderHook(() => useBankID("https://foo.com/api"));
+
+        // Trigger login
+        await act(() => result.current.start!());
+        // Wait for orderRef
+        await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
+
+        // Cancel login
+        await act(() => result.current.cancel!());
+        expect(result.current.data.orderRef).toBeFalsy();
+
+        // No qr codes are generated
+        act(() => void vi.advanceTimersByTime(2000));
+        await waitFor(() => expect(result.current.data.qr).toBeFalsy());
+    });
+
+    it("provides an error message on authenticate network error", async () => {
+        server.use(...authenticateNetworkError);
+
+        const {result, rerender} = renderHook(() => useBankID("https://foo.com/api"));
+
+        // Trigger login
+        await act(() => result.current.start!());
+
+        // Wait for error
+        await waitFor(() => expect(result.current.errorMessage).toEqual("Error when calling authenticate: AxiosError: Network Error"));
+    });
+
+    it("provides an error message on authenticate fail", async () => {
+        server.use(...authenticate401Error);
+
+        const {result, rerender} = renderHook(() => useBankID("https://foo.com/api"));
+
+        // Trigger login
+        await act(() => result.current.start!());
+
+        // Wait for error
+        await waitFor(() => expect(result.current.errorMessage).toEqual("Error when calling authenticate: AxiosError: Request failed with status code 401"));
+    });
+
+    it("provides an error message on collect network error", async () => {
+        server.use(...collectNetworkError);
+
+        const {result, rerender} = renderHook(() => useBankID("https://foo.com/api"));
+
+        // Trigger login
+        await act(() => result.current.start!());
+
+        // Gets an orderRef
+        await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
+
+        // Wait 2s
+        act(() => void vi.advanceTimersByTime(2000));
+
+        // Wait for error
+        await waitFor(() => expect(result.current.errorMessage).toEqual("Error when calling collect: AxiosError: Network Error"));
+    });
+
+    it("provides an error message on collect fail", async () => {
+        server.use(...collect401Error);
+        const h = server.listHandlers();
+
+        const {result, rerender} = renderHook(() => useBankID("https://foo.com/api"));
+
+        // Trigger login
+        await act(() => result.current.start!());
+
+        // Gets an orderRef
+        await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
+
+        // Wait 2s
+        act(() => void vi.advanceTimersByTime(2000));
+
+        // Wait for error
+        await waitFor(() => expect(result.current.errorMessage).toEqual("Error when calling collect: AxiosError: Request failed with status code 401"));
     });
 });

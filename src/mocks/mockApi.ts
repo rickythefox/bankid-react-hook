@@ -3,7 +3,7 @@ import { http, HttpResponse } from "msw";
 let collectedCount = 0;
 let qrCount = 0;
 
-const handlers = [
+export const defaultHandlers = [
     http?.post(/.*\/authenticate/, (info) => {
         return HttpResponse.json(
             {
@@ -64,4 +64,26 @@ const handlers = [
     }),
 ];
 
-export default handlers;
+export const authenticateNetworkError = [
+    http?.post(/.*\/authenticate/, (info) => {
+        return HttpResponse.error()
+    })
+];
+
+export const authenticate401Error = [
+    http?.post(/.*\/authenticate/, (info) => {
+        return HttpResponse.text("Unauthorized", { status: 401 });
+    })
+];
+
+export const collectNetworkError = [
+    http?.get(/.*\/collect/, (info) => {
+        return HttpResponse.error()
+    })
+];
+
+export const collect401Error = [
+    http?.get(/.*\/collect/, (info) => {
+        return HttpResponse.text("Unauthorized", { status: 401 });
+    })
+];

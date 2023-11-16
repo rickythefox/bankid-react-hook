@@ -23,6 +23,7 @@ const useBankID = (baseUrl: string) => {
     const [loginStatus, setLoginStatus] = useState<LoginStatus>(LoginStatus.None);
     const [qr, setQr] = useState<string>("");
     const [userData, setUserData] = useState<any>(null);
+    const [errorMessage, setErrorMessage] = useState<string>("");
 
     const {
         trigger: callAuthenticate,
@@ -83,10 +84,32 @@ const useBankID = (baseUrl: string) => {
         setQr(qrData?.qr || "");
     }, [qrData]);
 
+    useEffect(() => {
+        if (authenticateError) {
+            setErrorMessage(`Error when calling authenticate: ${authenticateError}`);
+        } else if (collectError) {
+            setErrorMessage(`Error when calling collect: ${collectError}`);
+        } else if (cancelError) {
+            setErrorMessage(`Error when calling cancel: ${cancelError}`);
+        } else if (qrError) {
+            setErrorMessage(`Error when calling qr: ${qrError}`);
+        } else {
+            return;
+        }
+
+        setLoginStatus(LoginStatus.Failed);
+        setOrderRef("");
+        resetAuthenticate();
+    }, [qrError, collectError, authenticateError, resetAuthenticate, cancelError]);
+
     const start = async () => {
         if (!orderRef) {
-            await callAuthenticate();
-            setLoginStatus(LoginStatus.Starting);
+            try {
+                await callAuthenticate();
+                setLoginStatus(LoginStatus.Starting);
+            } catch (e) {
+                console.error(e);
+            }
         }
     };
 
@@ -101,7 +124,7 @@ const useBankID = (baseUrl: string) => {
 
     const canStart = [LoginStatus.None, LoginStatus.Complete, LoginStatus.Failed].includes(loginStatus);
     const canCancel = [LoginStatus.Starting, LoginStatus.Polling, LoginStatus.UserSign].includes(loginStatus);
-    return {data: {orderRef, qr, userData}, token: userData?.token, start: canStart ? start : null, cancel: canCancel ? cancel : null};
+    return {data: {orderRef, qr, userData}, token: userData?.token, start: canStart ? start : null, cancel: canCancel ? cancel : null, errorMessage};
 };
 
 export default useBankID;
