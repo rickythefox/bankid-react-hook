@@ -32,7 +32,7 @@ const useBankID = (baseUrl: string) => {
   } = useSWRMutation(`${baseUrl}/authenticate`, postFetcher);
   const {
     trigger: callCancel,
-    data: cancelData,
+    // data: cancelData,
     error: cancelError,
   } = useSWRMutation(`${baseUrl}/cancel?orderRef=${orderRef}`, postFetcher);
   const { data: collectData, error: collectError } = useSWR(
