@@ -4,7 +4,7 @@ let collectedCount = 0;
 let qrCount = 0;
 
 export const defaultHandlers = [
-    http?.post(/.*\/authenticate/, (info) => {
+    http?.post(/.*\/authenticate/, (_info) => {
         return HttpResponse.json(
             {
                 "orderRef": "123",
@@ -65,25 +65,37 @@ export const defaultHandlers = [
 ];
 
 export const authenticateNetworkError = [
-    http?.post(/.*\/authenticate/, (info) => {
+    http?.post(/.*\/authenticate/, (_info) => {
         return HttpResponse.error()
     })
 ];
 
 export const authenticate401Error = [
-    http?.post(/.*\/authenticate/, (info) => {
+    http?.post(/.*\/authenticate/, (_info) => {
         return HttpResponse.text("Unauthorized", { status: 401 });
     })
 ];
 
 export const collectNetworkError = [
-    http?.get(/.*\/collect/, (info) => {
+    http?.get(/.*\/collect/, (_info) => {
         return HttpResponse.error()
     })
 ];
 
 export const collect401Error = [
-    http?.get(/.*\/collect/, (info) => {
+    http?.get(/.*\/collect/, (_info) => {
+        return HttpResponse.text("Unauthorized", { status: 401 });
+    })
+];
+
+export const qrNetworkError = [
+    http?.get(/.*\/qr/, (_info) => {
+        return HttpResponse.error()
+    })
+];
+
+export const qr401Error = [
+    http?.get(/.*\/qr/, (_info) => {
         return HttpResponse.text("Unauthorized", { status: 401 });
     })
 ];

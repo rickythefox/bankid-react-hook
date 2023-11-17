@@ -1,9 +1,17 @@
 /**
  * @vitest-environment jsdom
  */
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { authenticate401Error, authenticateNetworkError, collect401Error, collectNetworkError, defaultHandlers } from "../mocks/mockApi.ts";
+import { mutate } from "swr";
+import {
+    authenticate401Error,
+    authenticateNetworkError,
+    collect401Error,
+    collectNetworkError,
+    defaultHandlers, qr401Error,
+    qrNetworkError
+} from "../mocks/mockApi.ts";
 import { setupServer } from "msw/node";
 import useBankID from "./useBankID.ts";
 
@@ -14,7 +22,14 @@ beforeAll(() => {
     server.listen();
 });
 
+afterAll(() => {
+    server.close();
+});
+
 beforeEach(() => {
+    // Clear SWR cache
+    void mutate(Boolean, undefined, false);
+
     vi.useFakeTimers({
         toFake: [
             'setTimeout',
@@ -25,13 +40,12 @@ beforeEach(() => {
             'clearInterval',
             'Date',
             'nextTick',
-            'hrtime',
             'requestAnimationFrame',
             'cancelAnimationFrame',
             'requestIdleCallback',
             'cancelIdleCallback',
             'performance',
-            // The above excludes 'queueMicrotask'
+            // The above excludes 'queueMicrotask' and 'hrtime'
         ],
         shouldAdvanceTime: true,
     });
@@ -45,7 +59,7 @@ afterEach(() => {
 
 describe('useBankID', () => {
     it('happy flow works', async () => {
-        const {result, rerender} = renderHook(() => useBankID("https://foo.com/api"));
+        const {result} = renderHook(() => useBankID("https://foo.com/api"));
 
         // Can start login
         expect(result.current.start).toBeTruthy();
@@ -91,7 +105,7 @@ describe('useBankID', () => {
     });
 
     it("can cancel login", async () => {
-        const {result, rerender} = renderHook(() => useBankID("https://foo.com/api"));
+        const {result} = renderHook(() => useBankID("https://foo.com/api"));
 
         // Trigger login
         await act(() => result.current.start!());
@@ -110,7 +124,7 @@ describe('useBankID', () => {
     it("provides an error message on authenticate network error", async () => {
         server.use(...authenticateNetworkError);
 
-        const {result, rerender} = renderHook(() => useBankID("https://foo.com/api"));
+        const {result} = renderHook(() => useBankID("https://foo.com/api"));
 
         // Trigger login
         await act(() => result.current.start!());
@@ -122,7 +136,7 @@ describe('useBankID', () => {
     it("provides an error message on authenticate fail", async () => {
         server.use(...authenticate401Error);
 
-        const {result, rerender} = renderHook(() => useBankID("https://foo.com/api"));
+        const {result} = renderHook(() => useBankID("https://foo.com/api"));
 
         // Trigger login
         await act(() => result.current.start!());
@@ -134,7 +148,7 @@ describe('useBankID', () => {
     it("provides an error message on collect network error", async () => {
         server.use(...collectNetworkError);
 
-        const {result, rerender} = renderHook(() => useBankID("https://foo.com/api"));
+        const {result} = renderHook(() => useBankID("https://foo.com/api"));
 
         // Trigger login
         await act(() => result.current.start!());
@@ -151,9 +165,8 @@ describe('useBankID', () => {
 
     it("provides an error message on collect fail", async () => {
         server.use(...collect401Error);
-        const h = server.listHandlers();
 
-        const {result, rerender} = renderHook(() => useBankID("https://foo.com/api"));
+        const {result} = renderHook(() => useBankID("https://foo.com/api"));
 
         // Trigger login
         await act(() => result.current.start!());
@@ -166,5 +179,41 @@ describe('useBankID', () => {
 
         // Wait for error
         await waitFor(() => expect(result.current.errorMessage).toEqual("Error when calling collect: AxiosError: Request failed with status code 401"));
+    });
+
+    it("provides an error message on qr network error", async () => {
+        server.use(...qrNetworkError);
+
+        const {result} = renderHook(() => useBankID("https://foo.com/api"));
+
+        // Trigger login
+        await act(() => result.current.start!());
+
+        // Gets an orderRef
+        await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
+
+        // Wait 2s
+        act(() => void vi.advanceTimersByTime(2000));
+
+        // Wait for error
+        await waitFor(() => expect(result.current.errorMessage).toEqual("Error when calling qr: AxiosError: Network Error"));
+    });
+
+    it("provides an error message on qr fail", async () => {
+        server.use(...qr401Error);
+
+        const {result} = renderHook(() => useBankID("https://foo.com/api"));
+
+        // Trigger login
+        await act(() => result.current.start!());
+
+        // Gets an orderRef
+        await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
+
+        // Wait 2s
+        act(() => void vi.advanceTimersByTime(2000));
+
+        // Wait for error
+        await waitFor(() => expect(result.current.errorMessage).toEqual("Error when calling qr: AxiosError: Request failed with status code 401"));
     });
 });
