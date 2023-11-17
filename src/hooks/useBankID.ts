@@ -118,9 +118,9 @@ const useBankID = (baseUrl: string) => {
 
   const cancel = async () => {
     if (orderRef) {
+      setOrderRef("");
       await callCancel();
       resetAuthenticate();
-      setOrderRef("");
       setLoginStatus(LoginStatus.None);
     }
   };

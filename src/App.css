@@ -4,3 +4,12 @@
   padding: 2rem;
   text-align: center;
 }
+
+#baseUrl {
+  width: 400px;
+  margin-bottom: 3em;
+}
+
+label {
+  padding-right: 10px;
+}
