@@ -1,219 +1,238 @@
 /**
  * @vitest-environment jsdom
  */
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, renderHook, waitFor } from "@testing-library/react";
-import { mutate } from "swr";
 import {
-    authenticate401Error,
-    authenticateNetworkError,
-    collect401Error,
-    collectNetworkError,
-    defaultHandlers, qr401Error,
-    qrNetworkError
+  authenticate401Error,
+  authenticateNetworkError,
+  collect401Error,
+  collectNetworkError,
+  defaultHandlers,
+  qr401Error,
+  qrNetworkError,
 } from "../mocks/mockApi.ts";
-import { setupServer } from "msw/node";
 import useBankID from "./useBankID.ts";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { setupServer } from "msw/node";
+import { mutate } from "swr";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 let server: ReturnType<typeof setupServer>;
 
 beforeAll(() => {
-    server = setupServer(...defaultHandlers);
-    server.listen();
+  server = setupServer(...defaultHandlers);
+  server.listen();
 });
 
 afterAll(() => {
-    server.close();
+  server.close();
 });
 
 beforeEach(() => {
-    // Clear SWR cache
-    void mutate(Boolean, undefined, false);
+  // Clear SWR cache
+  void mutate(Boolean, undefined, false);
 
-    vi.useFakeTimers({
-        toFake: [
-            'setTimeout',
-            'clearTimeout',
-            'setImmediate',
-            'clearImmediate',
-            'setInterval',
-            'clearInterval',
-            'Date',
-            'nextTick',
-            'requestAnimationFrame',
-            'cancelAnimationFrame',
-            'requestIdleCallback',
-            'cancelIdleCallback',
-            'performance',
-            // The above excludes 'queueMicrotask' and 'hrtime'
-        ],
-        shouldAdvanceTime: true,
-    });
+  vi.useFakeTimers({
+    toFake: [
+      "setTimeout",
+      "clearTimeout",
+      "setImmediate",
+      "clearImmediate",
+      "setInterval",
+      "clearInterval",
+      "Date",
+      "nextTick",
+      "requestAnimationFrame",
+      "cancelAnimationFrame",
+      "requestIdleCallback",
+      "cancelIdleCallback",
+      "performance",
+      // The above excludes 'queueMicrotask' and 'hrtime'
+    ],
+    shouldAdvanceTime: true,
+  });
 });
 
 afterEach(() => {
-    vi.runOnlyPendingTimers();
-    vi.useRealTimers();
-    server.resetHandlers();
+  vi.runOnlyPendingTimers();
+  vi.useRealTimers();
+  server.resetHandlers();
 });
 
-describe('useBankID', () => {
-    it('happy flow works', async () => {
-        const {result} = renderHook(() => useBankID("https://foo.com/api"));
+describe("useBankID", () => {
+  it("happy flow works", async () => {
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
-        // Can start login
-        expect(result.current.start).toBeTruthy();
+    // Can start login
+    expect(result.current.start).toBeTruthy();
 
-        // Trigger login
-        await act(() => result.current.start!());
+    // Trigger login
+    await act(() => result.current.start!());
 
-        // Can't start login while logging in
-        expect(result.current.start).toBeFalsy();
+    // Can't start login while logging in
+    expect(result.current.start).toBeFalsy();
 
-        // Gets an orderRef
-        await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
+    // Gets an orderRef
+    await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
 
-        // Gets a qr code 2 seconds later
-        act(() => void vi.advanceTimersByTime(2000));
-        await waitFor(() => expect(result.current.data.qr).toBeTruthy());
+    // Gets a qr code 2 seconds later
+    act(() => void vi.advanceTimersByTime(2000));
+    await waitFor(() => expect(result.current.data.qr).toBeTruthy());
 
-        // Continues polling for qr codes
-        for (let i = 0; i < 4; i++) {
-            const lastQr = result.current.data.qr;
-            act(() => void vi.advanceTimersByTime(2000));
-            await waitFor(() => expect(result.current.data.qr).not.toBe(lastQr));
-        }
+    // Continues polling for qr codes
+    for (let i = 0; i < 4; i++) {
+      const lastQr = result.current.data.qr;
+      act(() => void vi.advanceTimersByTime(2000));
+      await waitFor(() => expect(result.current.data.qr).not.toBe(lastQr));
+    }
 
-        // User is signing, so no more qr codes
-        act(() => void vi.advanceTimersByTime(2000));
-        await waitFor(() => expect(result.current.data.qr).toBeFalsy());
+    // User is signing, so no more qr codes
+    act(() => void vi.advanceTimersByTime(2000));
+    await waitFor(() => expect(result.current.data.qr).toBeFalsy());
 
-        // User logs in for two more collect calls
-        for (let i = 0; i < 2; i++) {
-            act(() => void vi.advanceTimersByTime(2000));
-            await waitFor(() => expect(result.current.data.userData).toBeFalsy());
-        }
+    // User logs in for two more collect calls
+    for (let i = 0; i < 2; i++) {
+      act(() => void vi.advanceTimersByTime(2000));
+      await waitFor(() => expect(result.current.data.userData).toBeFalsy());
+    }
 
-        // Gets user data
-        await waitFor(() => expect(result.current.data.userData).toBeTruthy());
+    // Gets user data
+    await waitFor(() => expect(result.current.data.userData).toBeTruthy());
 
-        // Gets JWT token
-        await waitFor(() => expect(result.current.token).toEqual("jwt"));
+    // Gets JWT token
+    await waitFor(() => expect(result.current.token).toEqual("jwt"));
 
-        // Can log in again
-        expect(result.current.start).toBeTruthy();
-    });
+    // Can log in again
+    expect(result.current.start).toBeTruthy();
+  });
 
-    it("can cancel login", async () => {
-        const {result} = renderHook(() => useBankID("https://foo.com/api"));
+  it("can cancel login", async () => {
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
-        // Trigger login
-        await act(() => result.current.start!());
-        // Wait for orderRef
-        await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
+    // Trigger login
+    await act(() => result.current.start!());
+    // Wait for orderRef
+    await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
 
-        // Cancel login
-        await act(() => result.current.cancel!());
-        expect(result.current.data.orderRef).toBeFalsy();
+    // Cancel login
+    await act(() => result.current.cancel!());
+    expect(result.current.data.orderRef).toBeFalsy();
 
-        // No qr codes are generated
-        act(() => void vi.advanceTimersByTime(2000));
-        await waitFor(() => expect(result.current.data.qr).toBeFalsy());
-    });
+    // No qr codes are generated
+    act(() => void vi.advanceTimersByTime(2000));
+    await waitFor(() => expect(result.current.data.qr).toBeFalsy());
+  });
 
-    it("provides an error message on authenticate network error", async () => {
-        server.use(...authenticateNetworkError);
+  it("provides an error message on authenticate network error", async () => {
+    server.use(...authenticateNetworkError);
 
-        const {result} = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
-        // Trigger login
-        await act(() => result.current.start!());
+    // Trigger login
+    await act(() => result.current.start!());
 
-        // Wait for error
-        await waitFor(() => expect(result.current.errorMessage).toEqual("Error when calling authenticate: AxiosError: Network Error"));
-    });
+    // Wait for error
+    await waitFor(() =>
+      expect(result.current.errorMessage).toEqual("Error when calling authenticate: AxiosError: Network Error"),
+    );
+  });
 
-    it("provides an error message on authenticate fail", async () => {
-        server.use(...authenticate401Error);
+  it("provides an error message on authenticate fail", async () => {
+    server.use(...authenticate401Error);
 
-        const {result} = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
-        // Trigger login
-        await act(() => result.current.start!());
+    // Trigger login
+    await act(() => result.current.start!());
 
-        // Wait for error
-        await waitFor(() => expect(result.current.errorMessage).toEqual("Error when calling authenticate: AxiosError: Request failed with status code 401"));
-    });
+    // Wait for error
+    await waitFor(() =>
+      expect(result.current.errorMessage).toEqual(
+        "Error when calling authenticate: AxiosError: Request failed with status code 401",
+      ),
+    );
+  });
 
-    it("provides an error message on collect network error", async () => {
-        server.use(...collectNetworkError);
+  it("provides an error message on collect network error", async () => {
+    server.use(...collectNetworkError);
 
-        const {result} = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
-        // Trigger login
-        await act(() => result.current.start!());
+    // Trigger login
+    await act(() => result.current.start!());
 
-        // Gets an orderRef
-        await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
+    // Gets an orderRef
+    await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
 
-        // Wait 2s
-        act(() => void vi.advanceTimersByTime(2000));
+    // Wait 2s
+    act(() => void vi.advanceTimersByTime(2000));
 
-        // Wait for error
-        await waitFor(() => expect(result.current.errorMessage).toEqual("Error when calling collect: AxiosError: Network Error"));
-    });
+    // Wait for error
+    await waitFor(() =>
+      expect(result.current.errorMessage).toEqual("Error when calling collect: AxiosError: Network Error"),
+    );
+  });
 
-    it("provides an error message on collect fail", async () => {
-        server.use(...collect401Error);
+  it("provides an error message on collect fail", async () => {
+    server.use(...collect401Error);
 
-        const {result} = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
-        // Trigger login
-        await act(() => result.current.start!());
+    // Trigger login
+    await act(() => result.current.start!());
 
-        // Gets an orderRef
-        await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
+    // Gets an orderRef
+    await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
 
-        // Wait 2s
-        act(() => void vi.advanceTimersByTime(2000));
+    // Wait 2s
+    act(() => void vi.advanceTimersByTime(2000));
 
-        // Wait for error
-        await waitFor(() => expect(result.current.errorMessage).toEqual("Error when calling collect: AxiosError: Request failed with status code 401"));
-    });
+    // Wait for error
+    await waitFor(() =>
+      expect(result.current.errorMessage).toEqual(
+        "Error when calling collect: AxiosError: Request failed with status code 401",
+      ),
+    );
+  });
 
-    it("provides an error message on qr network error", async () => {
-        server.use(...qrNetworkError);
+  it("provides an error message on qr network error", async () => {
+    server.use(...qrNetworkError);
 
-        const {result} = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
-        // Trigger login
-        await act(() => result.current.start!());
+    // Trigger login
+    await act(() => result.current.start!());
 
-        // Gets an orderRef
-        await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
+    // Gets an orderRef
+    await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
 
-        // Wait 2s
-        act(() => void vi.advanceTimersByTime(2000));
+    // Wait 2s
+    act(() => void vi.advanceTimersByTime(2000));
 
-        // Wait for error
-        await waitFor(() => expect(result.current.errorMessage).toEqual("Error when calling qr: AxiosError: Network Error"));
-    });
+    // Wait for error
+    await waitFor(() =>
+      expect(result.current.errorMessage).toEqual("Error when calling qr: AxiosError: Network Error"),
+    );
+  });
 
-    it("provides an error message on qr fail", async () => {
-        server.use(...qr401Error);
+  it("provides an error message on qr fail", async () => {
+    server.use(...qr401Error);
 
-        const {result} = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
-        // Trigger login
-        await act(() => result.current.start!());
+    // Trigger login
+    await act(() => result.current.start!());
 
-        // Gets an orderRef
-        await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
+    // Gets an orderRef
+    await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
 
-        // Wait 2s
-        act(() => void vi.advanceTimersByTime(2000));
+    // Wait 2s
+    act(() => void vi.advanceTimersByTime(2000));
 
-        // Wait for error
-        await waitFor(() => expect(result.current.errorMessage).toEqual("Error when calling qr: AxiosError: Request failed with status code 401"));
-    });
+    // Wait for error
+    await waitFor(() =>
+      expect(result.current.errorMessage).toEqual(
+        "Error when calling qr: AxiosError: Request failed with status code 401",
+      ),
+    );
+  });
 });
