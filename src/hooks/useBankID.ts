@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 
-enum LoginStatus {
+export enum LoginStatus {
   None,
   Starting,
   Polling,
@@ -111,7 +111,7 @@ const useBankID = (baseUrl: string) => {
         await callAuthenticate();
         setLoginStatus(LoginStatus.Starting);
       } catch (e) {
-        console.error(e);
+        // Will be handled by useSWR
       }
     }
   };
@@ -129,9 +129,9 @@ const useBankID = (baseUrl: string) => {
   const canCancel = [LoginStatus.Starting, LoginStatus.Polling, LoginStatus.UserSign].includes(loginStatus);
   return {
     data: { orderRef, qr, userData },
-    token: userData?.token,
     start: canStart ? start : null,
     cancel: canCancel ? cancel : null,
+    loginStatus,
     errorMessage,
   };
 };

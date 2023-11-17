@@ -10,7 +10,7 @@ import {
   qr401Error,
   qrNetworkError,
 } from "../mocks/mockApi.ts";
-import useBankID from "./useBankID.ts";
+import useBankID, { LoginStatus } from "./useBankID.ts";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { mutate } from "swr";
@@ -78,6 +78,8 @@ describe("useBankID", () => {
     act(() => void vi.advanceTimersByTime(2000));
     await waitFor(() => expect(result.current.data.qr).toBeTruthy());
 
+    expect(result.current.loginStatus).toEqual(LoginStatus.Polling);
+
     // Continues polling for qr codes
     for (let i = 0; i < 4; i++) {
       const lastQr = result.current.data.qr;
@@ -89,6 +91,8 @@ describe("useBankID", () => {
     act(() => void vi.advanceTimersByTime(2000));
     await waitFor(() => expect(result.current.data.qr).toBeFalsy());
 
+    expect(result.current.loginStatus).toEqual(LoginStatus.UserSign);
+
     // User logs in for two more collect calls
     for (let i = 0; i < 2; i++) {
       act(() => void vi.advanceTimersByTime(2000));
@@ -99,7 +103,9 @@ describe("useBankID", () => {
     await waitFor(() => expect(result.current.data.userData).toBeTruthy());
 
     // Gets JWT token
-    await waitFor(() => expect(result.current.token).toEqual("jwt"));
+    await waitFor(() => expect(result.current.data?.userData?.token).toEqual("jwt"));
+
+    expect(result.current.loginStatus).toEqual(LoginStatus.Complete);
 
     // Can log in again
     expect(result.current.start).toBeTruthy();
@@ -113,6 +119,8 @@ describe("useBankID", () => {
     // Wait for orderRef
     await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
 
+    expect(result.current.loginStatus).toEqual(LoginStatus.Starting);
+
     // Cancel login
     await act(() => result.current.cancel!());
     expect(result.current.data.orderRef).toBeFalsy();
@@ -120,6 +128,7 @@ describe("useBankID", () => {
     // No qr codes are generated
     act(() => void vi.advanceTimersByTime(2000));
     await waitFor(() => expect(result.current.data.qr).toBeFalsy());
+    expect(result.current.loginStatus).toEqual(LoginStatus.None);
   });
 
   it("provides an error message on authenticate network error", async () => {
@@ -134,6 +143,7 @@ describe("useBankID", () => {
     await waitFor(() =>
       expect(result.current.errorMessage).toEqual("Error when calling authenticate: AxiosError: Network Error"),
     );
+    expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
   });
 
   it("provides an error message on authenticate fail", async () => {
@@ -150,6 +160,7 @@ describe("useBankID", () => {
         "Error when calling authenticate: AxiosError: Request failed with status code 401",
       ),
     );
+    expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
   });
 
   it("provides an error message on collect network error", async () => {
@@ -170,6 +181,7 @@ describe("useBankID", () => {
     await waitFor(() =>
       expect(result.current.errorMessage).toEqual("Error when calling collect: AxiosError: Network Error"),
     );
+    expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
   });
 
   it("provides an error message on collect fail", async () => {
@@ -192,6 +204,7 @@ describe("useBankID", () => {
         "Error when calling collect: AxiosError: Request failed with status code 401",
       ),
     );
+    expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
   });
 
   it("provides an error message on qr network error", async () => {
@@ -212,6 +225,7 @@ describe("useBankID", () => {
     await waitFor(() =>
       expect(result.current.errorMessage).toEqual("Error when calling qr: AxiosError: Network Error"),
     );
+    expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
   });
 
   it("provides an error message on qr fail", async () => {
@@ -234,5 +248,6 @@ describe("useBankID", () => {
         "Error when calling qr: AxiosError: Request failed with status code 401",
       ),
     );
+    expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
   });
 });
