@@ -24,14 +24,16 @@ function App() {
       {baseUrl && <div>Using base URL: {baseUrl}</div>}
       {data.qr ? (
         <div>
-          <QRCode value={data.qr} />
+          <QRCode size={128} value={data.qr} />
         </div>
       ) : (
         <div>Waiting for qr...</div>
       )}
       Login status: {LoginStatus[loginStatus]}
-      {data.userData?.completionData?.user ? (
-        <div>{data.userData.completionData.user}</div>
+      {data.userData ? (
+        <div>
+          {data.userData.personalNumber} {data.userData.name}
+        </div>
       ) : (
         <div>Waiting for user data...</div>
       )}

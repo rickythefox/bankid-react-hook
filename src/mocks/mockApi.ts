@@ -5,8 +5,10 @@ let qrCount = 0;
 
 export const defaultHandlers = [
   http?.post(/.*foo.com\/api\/authenticate/, (_info) => {
+    collectedCount = 0;
+    qrCount = 0;
     return HttpResponse.json({
-      orderRef: "123",
+      orderRef: "orderref-123",
       autoStartToken: "token",
       qr: "qr-initial",
     });
@@ -14,22 +16,22 @@ export const defaultHandlers = [
 
   http?.get(/.*foo.com\/api\/collect/, (info) => {
     const url = new URL(info.request.url);
-    if (url.searchParams.get("orderRef") !== "123") {
+    if (url.searchParams.get("orderRef") !== "orderref-123") {
       return HttpResponse.error();
     }
     collectedCount++;
     return HttpResponse.json({
       status: collectedCount > 7 ? "complete" : "pending",
       hintCode: collectedCount > 7 ? "" : collectedCount > 5 ? "userSign" : "outstandingTransaction",
-      orderRef: "123",
+      orderRef: "orderref-123",
       completionData:
         collectedCount > 7
           ? {
               user: {
-                personalNumber: "string",
-                name: "string",
-                givenName: "string",
-                surname: "string",
+                personalNumber: "191212121212",
+                name: "Test Testsson",
+                givenName: "Test",
+                surname: "Testsson",
               },
             }
           : null,
@@ -39,7 +41,7 @@ export const defaultHandlers = [
 
   http?.get(/.*foo.com\/api\/qr/, (info) => {
     const url = new URL(info.request.url);
-    if (url.searchParams.get("orderRef") !== "123") {
+    if (url.searchParams.get("orderRef") !== "orderref-123") {
       return HttpResponse.error();
     }
     return HttpResponse.json({
@@ -49,7 +51,7 @@ export const defaultHandlers = [
 
   http?.post(/.*foo.com\/api\/cancel/, (info) => {
     const url = new URL(info.request.url);
-    if (url.searchParams.get("orderRef") !== "123") {
+    if (url.searchParams.get("orderRef") !== "orderref-123") {
       return HttpResponse.error();
     }
     collectedCount = 0;
