@@ -19,6 +19,7 @@ const useBankID = (baseUrl: string) => {
   baseUrl = baseUrl.replace(/\/$/, "");
 
   const [orderRef, setOrderRef] = useState<string>("");
+  const [autoStartToken, setAutoStartToken] = useState<string>("");
   const [loginStatus, setLoginStatus] = useState<LoginStatus>(LoginStatus.None);
   const [qr, setQr] = useState<string>("");
   const [userData, setUserData] = useState<any>(null);
@@ -55,9 +56,10 @@ const useBankID = (baseUrl: string) => {
   );
 
   useEffect(() => {
-    if (!authenticateData?.orderRef) return;
+    if (!authenticateData?.orderRef || !authenticateData?.autoStartToken) return;
 
     setOrderRef(authenticateData.orderRef);
+    setAutoStartToken(authenticateData.autoStartToken);
 
     const timeoutId = setTimeout(() => {
       setLoginStatus(LoginStatus.Polling);
@@ -66,7 +68,7 @@ const useBankID = (baseUrl: string) => {
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [authenticateData?.orderRef]);
+  }, [authenticateData]);
 
   useEffect(() => {
     if (!collectData) return;
@@ -128,7 +130,7 @@ const useBankID = (baseUrl: string) => {
   const canStart = [LoginStatus.None, LoginStatus.Complete, LoginStatus.Failed].includes(loginStatus);
   const canCancel = [LoginStatus.Starting, LoginStatus.Polling, LoginStatus.UserSign].includes(loginStatus);
   return {
-    data: { orderRef, qr, userData },
+    data: { orderRef, qr, autoStartToken, userData },
     start: canStart ? start : null,
     cancel: canCancel ? cancel : null,
     loginStatus,
