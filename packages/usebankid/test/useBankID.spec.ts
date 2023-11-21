@@ -9,12 +9,17 @@ import {
   defaultHandlers,
   qr401Error,
   qrNetworkError,
-} from "../mocks/mockApi.ts";
-import useBankID, { LoginStatus } from "./useBankID.ts";
+} from "../../../mocks/mockApi";
+import { useBankID } from "../src";
+import { LoginStatus } from "../src";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import axios from "axios";
 import { setupServer } from "msw/node";
 import { mutate } from "swr";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+const getFetcher = (url: string) => axios.get(url).then((res) => res.data);
+const postFetcher = (url: string) => axios.post(url).then((res) => res.data);
 
 let server: ReturnType<typeof setupServer>;
 
@@ -60,7 +65,7 @@ afterEach(() => {
 
 describe("useBankID", () => {
   it("happy flow works", async () => {
-    const { result } = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api", getFetcher, postFetcher));
 
     // Can start login
     expect(result.current.start).toBeTruthy();
@@ -113,7 +118,7 @@ describe("useBankID", () => {
   });
 
   it("can cancel login", async () => {
-    const { result } = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api", getFetcher, postFetcher));
 
     // Trigger login
     await act(() => result.current.start!());
@@ -135,7 +140,7 @@ describe("useBankID", () => {
   it("provides an error message on authenticate network error", async () => {
     server.use(...authenticateNetworkError);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api", getFetcher, postFetcher));
 
     // Trigger login
     await act(() => result.current.start!());
@@ -150,7 +155,7 @@ describe("useBankID", () => {
   it("provides an error message on authenticate fail", async () => {
     server.use(...authenticate401Error);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api", getFetcher, postFetcher));
 
     // Trigger login
     await act(() => result.current.start!());
@@ -167,7 +172,7 @@ describe("useBankID", () => {
   it("provides an error message on collect network error", async () => {
     server.use(...collectNetworkError);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api", getFetcher, postFetcher));
 
     // Trigger login
     await act(() => result.current.start!());
@@ -188,7 +193,7 @@ describe("useBankID", () => {
   it("provides an error message on collect fail", async () => {
     server.use(...collect401Error);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api", getFetcher, postFetcher));
 
     // Trigger login
     await act(() => result.current.start!());
@@ -211,7 +216,7 @@ describe("useBankID", () => {
   it("provides an error message on qr network error", async () => {
     server.use(...qrNetworkError);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api", getFetcher, postFetcher));
 
     // Trigger login
     await act(() => result.current.start!());
@@ -232,7 +237,7 @@ describe("useBankID", () => {
   it("provides an error message on qr fail", async () => {
     server.use(...qr401Error);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api", getFetcher, postFetcher));
 
     // Trigger login
     await act(() => result.current.start!());

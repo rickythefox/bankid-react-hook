@@ -1,44 +1,22 @@
 {
-  "name": "bankid-react-hook",
+  "name": "workspace",
   "author": "Richard Ginzburg @rickythefox",
-  "private": false,
-  "version": "0.0.0",
-  "type": "module",
+  "private": true,
   "scripts": {
-    "dev": "vite",
-    "test": "vitest",
-    "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "format": "prettier --write ./src",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "axios": "^1.6.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "swr": "^2.2.4"
+    "demo": "pnpm --filter demo dev",
+    "build:package": "pnpm --filter bankid-react-hook build",
+    "build:demo": "pnpm --filter demo build",
+    "test": "vitest"
   },
   "devDependencies": {
-    "@testing-library/react": "^14.1.0",
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "@vitejs/plugin-react-swc": "^3.3.2",
     "eslint": "^8.45.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.3",
-    "i": "^0.3.7",
-    "jsdom": "^22.1.0",
     "msw": "^2.0.6",
     "prettier": "^3.1.0",
-    "react-qr-code": "^2.0.12",
-    "typescript": "^5.0.2",
-    "vite": "^4.4.5",
     "vitest": "^0.34.6"
-  },
-  "msw": {
-    "workerDirectory": "public"
   }
 }

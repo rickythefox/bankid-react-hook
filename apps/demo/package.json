@@ -1,0 +1,32 @@
+{
+  "name": "demo",
+  "author": "Richard Ginzburg @rickythefox",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "test": "vitest",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "format": "prettier --write ./src",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.6.1",
+    "bankid-react-hook": "workspace:^",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-qr-code": "^2.0.12",
+    "swr": "^2.2.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react-swc": "^3.3.2",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.5"
+  },
+  "msw": {
+    "workerDirectory": "public"
+  }
+}

@@ -1,21 +1,9 @@
-import axios from "axios";
+import { Fetcher, LoginStatus } from "./types";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 
-export enum LoginStatus {
-  None,
-  Starting,
-  Polling,
-  UserSign,
-  Complete,
-  Failed,
-}
-
-const getFetcher = (url: string) => axios.get(url).then((res) => res.data);
-const postFetcher = (url: string) => axios.post(url).then((res) => res.data);
-
-const useBankID = (baseUrl: string) => {
+export function useBankID(baseUrl: string, getFetcher: Fetcher, postFetcher: Fetcher) {
   baseUrl = baseUrl.replace(/\/$/, "");
 
   const [orderRef, setOrderRef] = useState<string>("");
@@ -136,6 +124,4 @@ const useBankID = (baseUrl: string) => {
     loginStatus,
     errorMessage,
   };
-};
-
-export default useBankID;
+}

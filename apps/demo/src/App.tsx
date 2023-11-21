@@ -1,11 +1,15 @@
 import "./App.css";
-import useBankID, { LoginStatus } from "./hooks/useBankID.ts";
+import axios from "axios";
+import { useBankID, LoginStatus } from "bankid-react-hook";
 import { useState } from "react";
 import QRCode from "react-qr-code";
 
+const getFetcher = (url: string) => axios.get(url).then((res) => res.data);
+const postFetcher = (url: string) => axios.post(url).then((res) => res.data);
+
 function App() {
   const [baseUrl, setBaseUrl] = useState<string>("https://foo.com/api");
-  const { data, start, cancel, errorMessage, loginStatus } = useBankID(baseUrl);
+  const { data, start, cancel, errorMessage, loginStatus } = useBankID(baseUrl, getFetcher, postFetcher);
 
   const onChangeBaseUrl = (e: React.ChangeEvent<HTMLInputElement>) => {
     const urlPattern = /https?:\/\/(\w+:?\w*)?(\S+)(:\d+)?(\/|\/([\w#!:.?+=&%\-/]))?/;

@@ -1,0 +1,67 @@
+{
+  "name": "bankid-react-hook",
+  "author": "Richard Ginzburg @rickythefox",
+  "description": "React hook for integrating Swedish BankID",
+  "keywords": [
+    "typescript",
+    "react",
+    "hook",
+    "swedish",
+    "bankid"
+  ],
+  "private": false,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/cjs/index.js",
+      "import": "./dist/esm/index.js"
+    },
+    "./src": {
+      "import": "./src/index.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write ./src",
+    "build": "pnpm build:cjs && pnpm build:esm",
+    "build:cjs": "tsc -p tsconfig.build.json --module commonjs --outDir dist/cjs --target es5",
+    "build:esm": "tsc -p tsconfig.build.json --module esNext --outDir dist/esm --target es6",
+    "clean": "rimraf -rf ./dist"
+  },
+  "dependencies": {
+    "swr": "^2.2.4"
+  },
+  "peerDependencies": {
+    "react": "^16.8.0  || ^17.0.0 || ^18.0.0",
+    "react-dom": "^16.8.0  || ^17.0.0 || ^18.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^14.1.0",
+    "@types/node": "^20.9.3",
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "axios": "^1.6.1",
+    "jsdom": "^22.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.0.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rickythefox/usebankid-react-hook"
+  },
+  "bugs": {
+    "url": "https://github.com/rickythefox/usebankid-react-hook/issues"
+  }
+}
