@@ -7,6 +7,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
       # Setup .npmrc file to publish to npm
       - uses: actions/setup-node@v3
         with:
@@ -15,6 +18,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       - name: Publish to npm
-        run: cd packages/usebankid && pnpm publish
+        run: cd packages/usebankid && pnpm publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
