@@ -48,7 +48,6 @@ export function useBankID(baseUrl: string, getFetcher: Fetcher, postFetcher: Fet
 
     setOrderRef(authenticateData.orderRef);
     setAutoStartToken(authenticateData.autoStartToken);
-    setQr(authenticateData.qr);
 
     const timeoutId = setTimeout(() => {
       setLoginStatus(LoginStatus.Polling);
@@ -75,8 +74,11 @@ export function useBankID(baseUrl: string, getFetcher: Fetcher, postFetcher: Fet
   }, [resetAuthenticate, collectData]);
 
   useEffect(() => {
-    setQr(qrData?.qr || "");
-  }, [qrData]);
+    setQr("");
+    if ([LoginStatus.Starting, LoginStatus.Polling].includes(loginStatus)) {
+      setQr(qrData?.qr || authenticateData?.qr || "");
+    }
+  }, [authenticateData?.qr, qrData?.qr, loginStatus]);
 
   useEffect(() => {
     if (authenticateError) {

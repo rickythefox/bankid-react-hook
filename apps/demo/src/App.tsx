@@ -1,5 +1,5 @@
 import "./App.css";
-import { useBankID, LoginStatus } from "bankid-react-hook";
+import { LoginStatus, useBankID } from "bankid-react-hook/src";
 import { useState } from "react";
 import QRCode from "react-qr-code";
 
