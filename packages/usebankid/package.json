@@ -10,7 +10,7 @@
     "bankid"
   ],
   "private": false,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -36,7 +36,7 @@
     "build": "pnpm build:cjs && pnpm build:esm",
     "build:cjs": "tsc -p tsconfig.build.json --module commonjs --outDir dist/cjs --target es5",
     "build:esm": "tsc -p tsconfig.build.json --module esNext --outDir dist/esm --target es6",
-    "publish-package": "pnpm publish --no-git-checks",
+    "publish:package": "pnpm publish --no-git-checks",
     "clean": "rimraf -rf ./dist"
   },
   "dependencies": {
