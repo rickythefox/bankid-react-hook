@@ -18,6 +18,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       - name: Publish to npm
-        run: cd packages/usebankid && pnpm publish --no-git-checks
+        run: pnpm publish-package
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

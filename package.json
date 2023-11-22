@@ -6,6 +6,7 @@
     "demo": "pnpm --filter demo dev",
     "build:package": "pnpm --filter bankid-react-hook build",
     "build:demo": "pnpm --filter demo build",
+    "publish-package": "pnpm --filter bankid-react-hook publish-package",
     "test": "vitest"
   },
   "devDependencies": {
