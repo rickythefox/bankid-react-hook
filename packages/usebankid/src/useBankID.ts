@@ -48,6 +48,7 @@ export function useBankID(baseUrl: string, getFetcher: Fetcher, postFetcher: Fet
 
     setOrderRef(authenticateData.orderRef);
     setAutoStartToken(authenticateData.autoStartToken);
+    setQr(authenticateData.qr);
 
     const timeoutId = setTimeout(() => {
       setLoginStatus(LoginStatus.Polling);
@@ -109,6 +110,7 @@ export function useBankID(baseUrl: string, getFetcher: Fetcher, postFetcher: Fet
   const cancel = async () => {
     if (orderRef) {
       setOrderRef("");
+      setQr("");
       await callCancel();
       resetAuthenticate();
       setLoginStatus(LoginStatus.None);

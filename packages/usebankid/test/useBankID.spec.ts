@@ -76,9 +76,10 @@ describe("useBankID", () => {
     // Can't start login while logging in
     expect(result.current.start).toBeFalsy();
 
-    // Gets an orderRef and autoStartToken
+    // Gets an orderRef, autoStartToken and qr code
     await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
     expect(result.current.data.autoStartToken).toBeTruthy();
+    expect(result.current.data.qr).toBeTruthy();
 
     // Gets a qr code 2 seconds later
     act(() => void vi.advanceTimersByTime(2000));
