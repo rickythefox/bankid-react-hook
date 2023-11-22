@@ -60,7 +60,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/rickythefox/usebankid-react-hook"
+    "url": "https://github.com/rickythefox/usebankid-react-hook/tree/master/packages/usebankid"
   },
   "bugs": {
     "url": "https://github.com/rickythefox/usebankid-react-hook/issues"
