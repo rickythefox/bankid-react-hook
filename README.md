@@ -1,5 +1,7 @@
 # useBankID React hook
 
+[![npm version](https://badge.fury.io/js/bankid-react-hook.svg)](https://badge.fury.io/js/bankid-react-hook)
+
 A React hook for using the Swedish BankID.
 * Simplifies using the BankID API.
 * Polls using correct intervals - 1s for qr code, 2s for collect.
