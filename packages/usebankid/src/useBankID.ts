@@ -99,32 +99,34 @@ export function useBankID(baseUrl: string, getFetcher: Fetcher, postFetcher: Fet
   }, [qrError, collectError, authenticateError, resetAuthenticate, cancelError]);
 
   const start = async () => {
-    if (!orderRef) {
-      try {
-        await callAuthenticate();
-        setLoginStatus(LoginStatus.Starting);
-      } catch (e) {
-        // Will be handled by useSWR
-      }
+    const canStart = [LoginStatus.None, LoginStatus.Complete, LoginStatus.Failed].includes(loginStatus);
+    if (!canStart || orderRef) return false;
+
+    try {
+      await callAuthenticate();
+      setLoginStatus(LoginStatus.Starting);
+    } catch (e) {
+      // Will be handled by useSWR
     }
+    return true;
   };
 
   const cancel = async () => {
-    if (orderRef) {
-      setOrderRef("");
-      setQr("");
-      await callCancel();
-      resetAuthenticate();
-      setLoginStatus(LoginStatus.None);
-    }
+    const canCancel = [LoginStatus.Starting, LoginStatus.Polling, LoginStatus.UserSign].includes(loginStatus);
+    if (!canCancel || !orderRef) return false;
+
+    setOrderRef("");
+    setQr("");
+    await callCancel();
+    resetAuthenticate();
+    setLoginStatus(LoginStatus.None);
+    return true;
   };
 
-  const canStart = [LoginStatus.None, LoginStatus.Complete, LoginStatus.Failed].includes(loginStatus);
-  const canCancel = [LoginStatus.Starting, LoginStatus.Polling, LoginStatus.UserSign].includes(loginStatus);
   return {
     data: { orderRef, qr, autoStartToken, userData },
-    start: canStart ? start : null,
-    cancel: canCancel ? cancel : null,
+    start,
+    cancel,
     loginStatus,
     errorMessage,
   };

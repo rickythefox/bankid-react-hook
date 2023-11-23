@@ -74,7 +74,7 @@ describe("useBankID", () => {
     await act(() => result.current.start!());
 
     // Can't start login while logging in
-    expect(result.current.start).toBeFalsy();
+    expect(await result.current.start()).toBeFalsy();
 
     // Gets an orderRef, autoStartToken and qr code
     await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
@@ -131,6 +131,7 @@ describe("useBankID", () => {
     // Cancel login
     await act(() => result.current.cancel!());
     expect(result.current.data.orderRef).toBeFalsy();
+    expect(await result.current.cancel()).toBeFalsy();
 
     // No qr codes are generated
     act(() => void vi.advanceTimersByTime(2000));
