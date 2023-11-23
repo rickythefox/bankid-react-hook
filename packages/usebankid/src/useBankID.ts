@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 
-export function useBankID(baseUrl: string, getFetcher: Fetcher, postFetcher: Fetcher) {
+export function useBankID(baseUrl: string, initialOrderRef: string | null, getFetcher: Fetcher, postFetcher: Fetcher) {
   baseUrl = baseUrl.replace(/\/$/, "");
 
   const [orderRef, setOrderRef] = useState<string>("");
@@ -43,6 +43,15 @@ export function useBankID(baseUrl: string, getFetcher: Fetcher, postFetcher: Fet
     },
   );
 
+  // If initialOrderRef is set then we are returning from the app - continue collecting
+  useEffect(() => {
+    if (!initialOrderRef) return;
+
+    setOrderRef(initialOrderRef);
+    setLoginStatus(LoginStatus.UserSign);
+  }, [initialOrderRef]);
+
+  // If authenticateData is set, continue the login process
   useEffect(() => {
     if (!authenticateData?.orderRef || !authenticateData?.autoStartToken) return;
 

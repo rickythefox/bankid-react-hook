@@ -3,6 +3,10 @@ import { http, HttpResponse } from "msw";
 let collectedCount = 0;
 let qrCount = 0;
 
+export const setCollectedCount = (count: number) => {
+  collectedCount = count;
+};
+
 export const defaultHandlers = [
   http?.post(/.*foo.com\/api\/authenticate/, (_info) => {
     collectedCount = 0;
