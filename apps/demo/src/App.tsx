@@ -3,12 +3,9 @@ import { LoginStatus, useBankID } from "bankid-react-hook/src";
 import { useState } from "react";
 import QRCode from "react-qr-code";
 
-const getFetcher = (url: string) => fetch(url).then((res) => res.json());
-const postFetcher = (url: string) => fetch(url, { method: "POST" }).then((res) => res.json());
-
 function App() {
   const [baseUrl, setBaseUrl] = useState<string>("https://foo.com/api");
-  const { data, start, cancel, errorMessage, loginStatus } = useBankID(baseUrl, getFetcher, postFetcher);
+  const { data, start, cancel, errorMessage, loginStatus } = useBankID(baseUrl);
 
   const onChangeBaseUrl = (e: React.ChangeEvent<HTMLInputElement>) => {
     const urlPattern = /https?:\/\/(\w+:?\w*)?(\S+)(:\d+)?(\/|\/([\w#!:.?+=&%\-/]))?/;

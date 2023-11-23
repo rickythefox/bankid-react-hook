@@ -1,5 +1,8 @@
 import { http, HttpResponse } from "msw";
 
+export const COLLECTS_TO_COMPLETE = 8;
+export const QRS_TO_GENERATE = 5;
+
 let collectedCount = 0;
 let qrCount = 0;
 
@@ -7,10 +10,13 @@ export const setCollectedCount = (count: number) => {
   collectedCount = count;
 };
 
+export const resetCounts = () => {
+  collectedCount = 0;
+  qrCount = 0;
+};
+
 export const defaultHandlers = [
   http?.post(/.*foo.com\/api\/authenticate/, (_info) => {
-    collectedCount = 0;
-    qrCount = 0;
     return HttpResponse.json({
       orderRef: "orderref-123",
       autoStartToken: "token",
@@ -25,11 +31,16 @@ export const defaultHandlers = [
     }
     collectedCount++;
     return HttpResponse.json({
-      status: collectedCount > 7 ? "complete" : "pending",
-      hintCode: collectedCount > 7 ? "" : collectedCount > 5 ? "userSign" : "outstandingTransaction",
+      status: collectedCount >= COLLECTS_TO_COMPLETE ? "complete" : "pending",
+      hintCode:
+        collectedCount >= COLLECTS_TO_COMPLETE
+          ? ""
+          : collectedCount >= QRS_TO_GENERATE
+            ? "userSign"
+            : "outstandingTransaction",
       orderRef: "orderref-123",
       completionData:
-        collectedCount > 7
+        collectedCount >= COLLECTS_TO_COMPLETE
           ? {
               user: {
                 personalNumber: "191212121212",
@@ -39,7 +50,7 @@ export const defaultHandlers = [
               },
             }
           : null,
-      token: "jwt",
+      token: collectedCount < COLLECTS_TO_COMPLETE ? `collected-${collectedCount}` : "jwt",
     });
   }),
 
@@ -59,7 +70,7 @@ export const defaultHandlers = [
       return HttpResponse.error();
     }
     collectedCount = 0;
-    return HttpResponse.json();
+    return HttpResponse.json({});
   }),
 ];
 

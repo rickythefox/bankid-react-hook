@@ -6,20 +6,19 @@ import {
   authenticateNetworkError,
   collect401Error,
   collectNetworkError,
+  COLLECTS_TO_COMPLETE,
   defaultHandlers,
   qr401Error,
   qrNetworkError,
+  QRS_TO_GENERATE,
+  resetCounts,
   setCollectedCount,
 } from "../../../mocks/mockApi";
 import { LoginStatus, useBankID } from "../src";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import axios from "axios";
 import { setupServer } from "msw/node";
 import { mutate } from "swr";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-
-const getFetcher = (url: string) => axios.get(url).then((res) => res.data);
-const postFetcher = (url: string) => axios.post(url).then((res) => res.data);
 
 let server: ReturnType<typeof setupServer>;
 
@@ -55,6 +54,8 @@ beforeEach(() => {
     ],
     shouldAdvanceTime: true,
   });
+
+  resetCounts();
 });
 
 afterEach(() => {
@@ -65,7 +66,7 @@ afterEach(() => {
 
 describe("useBankID", () => {
   it("normal flow works", async () => {
-    const { result } = renderHook(() => useBankID("https://foo.com/api", null, getFetcher, postFetcher));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Can start login
     expect(result.current.start).toBeTruthy();
@@ -88,7 +89,7 @@ describe("useBankID", () => {
     expect(result.current.loginStatus).toEqual(LoginStatus.Polling);
 
     // Continues polling for qr codes
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < QRS_TO_GENERATE; i++) {
       const lastQr = result.current.data.qr;
       act(() => void vi.advanceTimersByTime(2000));
       await waitFor(() => expect(result.current.data.qr).not.toBe(lastQr));
@@ -100,8 +101,8 @@ describe("useBankID", () => {
 
     expect(result.current.loginStatus).toEqual(LoginStatus.UserSign);
 
-    // User logs in for two more collect calls
-    for (let i = 0; i < 2; i++) {
+    // User logs in for a few more collect calls
+    for (let i = 0; i < COLLECTS_TO_COMPLETE - QRS_TO_GENERATE + 1; i++) {
       act(() => void vi.advanceTimersByTime(2000));
       await waitFor(() => expect(result.current.data.userData).toBeFalsy());
     }
@@ -121,7 +122,7 @@ describe("useBankID", () => {
   it("continuation flow works", async () => {
     setCollectedCount(5);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api", "orderref-123", getFetcher, postFetcher));
+    const { result } = renderHook(() => useBankID("https://foo.com/api", "orderref-123"));
 
     // User is signing, so no more qr codes
     act(() => void vi.advanceTimersByTime(2000));
@@ -130,7 +131,7 @@ describe("useBankID", () => {
     expect(result.current.loginStatus).toEqual(LoginStatus.UserSign);
 
     // User logs in for two more collect calls
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 4; i++) {
       act(() => void vi.advanceTimersByTime(2000));
       await waitFor(() => expect(result.current.data.userData).toBeFalsy());
     }
@@ -148,7 +149,7 @@ describe("useBankID", () => {
   });
 
   it("can cancel login", async () => {
-    const { result } = renderHook(() => useBankID("https://foo.com/api", null, getFetcher, postFetcher));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
     await act(() => result.current.start!());
@@ -171,39 +172,33 @@ describe("useBankID", () => {
   it("provides an error message on authenticate network error", async () => {
     server.use(...authenticateNetworkError);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api", null, getFetcher, postFetcher));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
     await act(() => result.current.start!());
 
     // Wait for error
-    await waitFor(() =>
-      expect(result.current.errorMessage).toEqual("Error when calling authenticate: AxiosError: Network Error"),
-    );
+    await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling authenticate"));
     expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
   });
 
   it("provides an error message on authenticate fail", async () => {
     server.use(...authenticate401Error);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api", null, getFetcher, postFetcher));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
     await act(() => result.current.start!());
 
     // Wait for error
-    await waitFor(() =>
-      expect(result.current.errorMessage).toEqual(
-        "Error when calling authenticate: AxiosError: Request failed with status code 401",
-      ),
-    );
+    await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling authenticate"));
     expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
   });
 
   it("provides an error message on collect network error", async () => {
     server.use(...collectNetworkError);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api", null, getFetcher, postFetcher));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
     await act(() => result.current.start!());
@@ -215,16 +210,14 @@ describe("useBankID", () => {
     act(() => void vi.advanceTimersByTime(2000));
 
     // Wait for error
-    await waitFor(() =>
-      expect(result.current.errorMessage).toEqual("Error when calling collect: AxiosError: Network Error"),
-    );
+    await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling collect"));
     expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
   });
 
   it("provides an error message on collect fail", async () => {
     server.use(...collect401Error);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api", null, getFetcher, postFetcher));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
     await act(() => result.current.start!());
@@ -236,18 +229,14 @@ describe("useBankID", () => {
     act(() => void vi.advanceTimersByTime(2000));
 
     // Wait for error
-    await waitFor(() =>
-      expect(result.current.errorMessage).toEqual(
-        "Error when calling collect: AxiosError: Request failed with status code 401",
-      ),
-    );
+    await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling collect"));
     expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
   });
 
   it("provides an error message on qr network error", async () => {
     server.use(...qrNetworkError);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api", null, getFetcher, postFetcher));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
     await act(() => result.current.start!());
@@ -259,16 +248,14 @@ describe("useBankID", () => {
     act(() => void vi.advanceTimersByTime(2000));
 
     // Wait for error
-    await waitFor(() =>
-      expect(result.current.errorMessage).toEqual("Error when calling qr: AxiosError: Network Error"),
-    );
+    await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling qr"));
     expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
   });
 
   it("provides an error message on qr fail", async () => {
     server.use(...qr401Error);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api", null, getFetcher, postFetcher));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
     await act(() => result.current.start!());
@@ -280,11 +267,7 @@ describe("useBankID", () => {
     act(() => void vi.advanceTimersByTime(2000));
 
     // Wait for error
-    await waitFor(() =>
-      expect(result.current.errorMessage).toEqual(
-        "Error when calling qr: AxiosError: Request failed with status code 401",
-      ),
-    );
+    await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling qr"));
     expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
   });
 });

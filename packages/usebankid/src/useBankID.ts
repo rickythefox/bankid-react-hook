@@ -3,7 +3,30 @@ import { useEffect, useState } from "react";
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 
-export function useBankID(baseUrl: string, initialOrderRef: string | null, getFetcher: Fetcher, postFetcher: Fetcher) {
+function createFetcher(config: RequestInit) {
+  return async (url: string) => {
+    try {
+      const response = await fetch(url, config);
+      if (!response.ok) {
+        const errorMessage = await response.text();
+        return Promise.reject(new Error(errorMessage));
+      }
+      return await response.json();
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  };
+}
+
+const defaultGetFetcher = createFetcher({ method: "GET" });
+const defaultPostFetcher = createFetcher({ method: "POST" });
+
+export function useBankID(
+  baseUrl: string,
+  initialOrderRef: string | null = null,
+  getFetcher: Fetcher = defaultGetFetcher,
+  postFetcher: Fetcher = defaultPostFetcher,
+) {
   baseUrl = baseUrl.replace(/\/$/, "");
 
   const [orderRef, setOrderRef] = useState<string>("");
