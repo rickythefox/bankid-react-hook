@@ -23,7 +23,6 @@ const defaultPostFetcher = createFetcher({ method: "POST" });
 
 export function useBankID(
   baseUrl: string,
-  initialOrderRef: string | null = null,
   getFetcher: Fetcher = defaultGetFetcher,
   postFetcher: Fetcher = defaultPostFetcher,
 ) {
@@ -65,14 +64,6 @@ export function useBankID(
       refreshInterval: 1000,
     },
   );
-
-  // If initialOrderRef is set then we are returning from the app - continue collecting
-  useEffect(() => {
-    if (!initialOrderRef) return;
-
-    setOrderRef(initialOrderRef);
-    setLoginStatus(LoginStatus.UserSign);
-  }, [initialOrderRef]);
 
   // If authenticateData is set, continue the login process
   useEffect(() => {
@@ -130,13 +121,18 @@ export function useBankID(
     resetAuthenticate();
   }, [qrError, collectError, authenticateError, resetAuthenticate, cancelError]);
 
-  const start = async () => {
+  const start = async (initialOrderRef: string = "") => {
     const canStart = [LoginStatus.None, LoginStatus.Complete, LoginStatus.Failed].includes(loginStatus);
     if (!canStart || orderRef) return false;
 
     try {
-      await callAuthenticate();
-      setLoginStatus(LoginStatus.Starting);
+      if (initialOrderRef) {
+        setOrderRef(initialOrderRef);
+        setLoginStatus(LoginStatus.UserSign);
+      } else {
+        await callAuthenticate();
+        setLoginStatus(LoginStatus.Starting);
+      }
     } catch (e) {
       // Will be handled by useSWR
     }

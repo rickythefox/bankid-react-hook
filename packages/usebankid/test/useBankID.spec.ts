@@ -122,7 +122,16 @@ describe("useBankID", () => {
   it("continuation flow works", async () => {
     setCollectedCount(5);
 
-    const { result } = renderHook(() => useBankID("https://foo.com/api", "orderref-123"));
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
+
+    // Can start login
+    expect(result.current.start).toBeTruthy();
+
+    // Trigger login
+    await act(() => result.current.start!("orderref-123"));
+
+    // Can't start login while logging in
+    expect(await result.current.start()).toBeFalsy();
 
     // User is signing, so no more qr codes
     act(() => void vi.advanceTimersByTime(2000));
