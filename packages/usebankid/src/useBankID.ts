@@ -125,6 +125,8 @@ export function useBankID(
     const canStart = [LoginStatus.None, LoginStatus.Complete, LoginStatus.Failed].includes(loginStatus);
     if (!canStart || orderRef) return false;
 
+    setErrorMessage("");
+
     try {
       if (initialOrderRef) {
         setOrderRef(initialOrderRef);
