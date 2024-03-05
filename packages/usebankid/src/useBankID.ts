@@ -1,163 +1,116 @@
-import { Fetcher, LoginStatus } from "./types";
-import { useEffect, useState } from "react";
-import useSWR from "swr";
-import useSWRMutation from "swr/mutation";
+import { ActionType, reducer } from "./reducer";
+import { Status } from "./types";
+import { useCallback, useEffect, useReducer } from "react";
 
-function createFetcher(config: RequestInit) {
-  return async (url: string) => {
-    try {
-      const response = await fetch(url, config);
-      if (!response.ok) {
-        const errorMessage = await response.text();
-        return Promise.reject(new Error(errorMessage));
-      }
-      return await response.json();
-    } catch (error) {
-      return Promise.reject(error);
-    }
-  };
+async function fetchData(url: string, options?: RequestInit, searchParams?: Record<string, any>) {
+  const res = await fetch(searchParams ? `${url}?${new URLSearchParams(searchParams).toString()}` : url, {
+    ...options,
+  });
+  return res.json();
 }
 
-const defaultGetFetcher = createFetcher({ method: "GET" });
-const defaultPostFetcher = createFetcher({ method: "POST" });
-
-export function useBankID(
-  baseUrl: string,
-  getFetcher: Fetcher = defaultGetFetcher,
-  postFetcher: Fetcher = defaultPostFetcher,
-) {
+export function useBankID(baseUrl: string) {
   baseUrl = baseUrl.replace(/\/$/, "");
+  const [state, dispatch] = useReducer(reducer, { status: Status.None });
 
-  const [orderRef, setOrderRef] = useState<string>("");
-  const [autoStartToken, setAutoStartToken] = useState<string>("");
-  const [loginStatus, setLoginStatus] = useState<LoginStatus>(LoginStatus.None);
-  const [qr, setQr] = useState<string>("");
-  const [userData, setUserData] = useState<any>(null);
-  const [errorMessage, setErrorMessage] = useState<string>("");
+  const callAuthenticate = useCallback(() => {
+    fetchData(`${baseUrl}/authenticate`, { method: "POST" })
+      .then((data) => dispatch({ type: ActionType.UpdateAuthenticationData, ...data }))
+      .catch((error) => dispatch({ type: ActionType.Error, error, errorMessage: "Error when calling authenticate" }));
+  }, [baseUrl]);
 
-  const {
-    trigger: callAuthenticate,
-    reset: resetAuthenticate,
-    data: authenticateData,
-    error: authenticateError,
-  } = useSWRMutation(`${baseUrl}/authenticate`, postFetcher);
-  const {
-    trigger: callCancel,
-    // data: cancelData,
-    error: cancelError,
-  } = useSWRMutation(`${baseUrl}/cancel?orderRef=${orderRef}`, postFetcher);
-  const { data: collectData, error: collectError } = useSWR(
-    [LoginStatus.Polling, LoginStatus.UserSign].includes(loginStatus)
-      ? `${baseUrl}/collect?orderRef=${orderRef}`
-      : null,
-    getFetcher,
-    {
-      dedupingInterval: 0,
-      refreshInterval: 2000,
-    },
-  );
-  const { data: qrData, error: qrError } = useSWR(
-    loginStatus === LoginStatus.Polling ? `${baseUrl}/qr?orderRef=${orderRef}` : null,
-    getFetcher,
-    {
-      dedupingInterval: 0,
-      refreshInterval: 1000,
-    },
-  );
-
-  // If authenticateData is set, continue the login process
-  useEffect(() => {
-    if (!authenticateData?.orderRef || !authenticateData?.autoStartToken) return;
-
-    setOrderRef(authenticateData.orderRef);
-    setAutoStartToken(authenticateData.autoStartToken);
-
-    const timeoutId = setTimeout(() => {
-      setLoginStatus(LoginStatus.Polling);
+  const startCollecting = useCallback(() => {
+    return setInterval(() => {
+      fetchData(`${baseUrl}/collect`, undefined, { orderRef: state.orderRef })
+        .then((data) => {
+          if (data.hintCode === "userSign") {
+            dispatch({ type: ActionType.UpdateLoginStatus, status: Status.UserSign });
+          } else if (data.status === "complete") {
+            dispatch({
+              type: ActionType.UpdateUserData,
+              data: data.completionData.user,
+              token: data.token,
+            });
+          }
+        })
+        .catch((error) => dispatch({ type: ActionType.Error, error, errorMessage: "Error when calling collect" }));
     }, 2000);
+  }, [baseUrl, state.orderRef]);
 
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [authenticateData]);
+  const startGeneratingQrCodes = useCallback(() => {
+    return setInterval(() => {
+      fetchData(`${baseUrl}/qr`, undefined, { orderRef: state.orderRef })
+        .then((data) => dispatch({ type: ActionType.UpdateQr, qr: data.qr }))
+        .catch((error) => dispatch({ type: ActionType.Error, error, errorMessage: "Error when calling qr" }));
+    }, 1000);
+  }, [baseUrl, state.orderRef]);
 
-  useEffect(() => {
-    if (!collectData) return;
-
-    if (collectData.status === "complete") {
-      setUserData({ ...collectData.completionData.user, token: collectData.token });
-      setOrderRef("");
-      setLoginStatus(LoginStatus.Complete);
-      resetAuthenticate();
-    }
-
-    if (collectData.hintCode === "userSign") {
-      setLoginStatus(LoginStatus.UserSign);
-    }
-  }, [resetAuthenticate, collectData]);
+  const cancelLogin = useCallback(() => {
+    fetchData(`${baseUrl}/cancel`, { method: "POST" }, { orderRef: state.orderRef })
+      .then(() => dispatch({ type: ActionType.UpdateLoginStatus, status: Status.Cancelled }))
+      .catch((error) => dispatch({ type: ActionType.Error, error, errorMessage: "Error when calling cancel" }));
+  }, [baseUrl, state.orderRef]);
 
   useEffect(() => {
-    setQr("");
-    if ([LoginStatus.Starting, LoginStatus.Polling].includes(loginStatus)) {
-      setQr(qrData?.qr || authenticateData?.qr || "");
-    }
-  }, [authenticateData?.qr, qrData?.qr, loginStatus]);
-
-  useEffect(() => {
-    if (authenticateError) {
-      setErrorMessage(`Error when calling authenticate: ${authenticateError}`);
-    } else if (collectError) {
-      setErrorMessage(`Error when calling collect: ${collectError}`);
-    } else if (cancelError) {
-      setErrorMessage(`Error when calling cancel: ${cancelError}`);
-    } else if (qrError) {
-      setErrorMessage(`Error when calling qr: ${qrError}`);
-    } else {
-      return;
-    }
-
-    setLoginStatus(LoginStatus.Failed);
-    setOrderRef("");
-    resetAuthenticate();
-  }, [qrError, collectError, authenticateError, resetAuthenticate, cancelError]);
-
-  const start = async (initialOrderRef: string = "") => {
-    const canStart = [LoginStatus.None, LoginStatus.Complete, LoginStatus.Failed].includes(loginStatus);
-    if (!canStart || orderRef) return false;
-
-    setErrorMessage("");
-
-    try {
-      if (initialOrderRef) {
-        setOrderRef(initialOrderRef);
-        setLoginStatus(LoginStatus.UserSign);
-      } else {
-        await callAuthenticate();
-        setLoginStatus(LoginStatus.Starting);
+    switch (state.status) {
+      case Status.Starting:
+        callAuthenticate();
+        break;
+      case Status.Continuing:
+        dispatch({
+          type: ActionType.UpdateIntervalIds,
+          collectInterval: startCollecting(),
+        });
+        break;
+      case Status.Started: {
+        dispatch({
+          type: ActionType.UpdateIntervalIds,
+          collectInterval: startCollecting(),
+          qrInterval: startGeneratingQrCodes(),
+        });
+        break;
       }
-    } catch (e) {
-      // Will be handled by useSWR
+      case Status.UserSign:
+        clearInterval(state.qrInterval);
+        break;
+      case Status.Cancelling:
+        cancelLogin();
+        break;
+      case Status.Complete:
+      case Status.Failed:
+      case Status.Cancelled:
+        clearInterval(state.collectInterval);
+        clearInterval(state.qrInterval);
+        break;
+    }
+  }, [baseUrl, callAuthenticate, cancelLogin, startCollecting, startGeneratingQrCodes, state]);
+
+  const start = (initialOrderRef: string = "") => {
+    const canStart = [Status.None, Status.Complete, Status.Failed, Status.Cancelled].includes(state.status);
+    if (!canStart) return false;
+
+    if (initialOrderRef) {
+      dispatch({ type: ActionType.ContinueLogin, orderRef: initialOrderRef });
+    } else {
+      dispatch({ type: ActionType.StartLogin });
     }
     return true;
   };
 
-  const cancel = async () => {
-    const canCancel = [LoginStatus.Starting, LoginStatus.Polling, LoginStatus.UserSign].includes(loginStatus);
-    if (!canCancel || !orderRef) return false;
+  const cancel = () => {
+    const canCancel = [Status.Starting, Status.Started, Status.Polling, Status.UserSign].includes(state.status);
+    if (!canCancel) return false;
 
-    setOrderRef("");
-    setQr("");
-    await callCancel();
-    resetAuthenticate();
-    setLoginStatus(LoginStatus.None);
+    dispatch({ type: ActionType.CancelLogin });
     return true;
   };
 
+  const { orderRef, qr, autoStartToken, userData } = state;
   return {
     data: { orderRef, qr, autoStartToken, userData },
     start,
     cancel,
-    loginStatus,
-    errorMessage,
+    loginStatus: state.status,
+    errorMessage: state.errorMessage,
   };
 }

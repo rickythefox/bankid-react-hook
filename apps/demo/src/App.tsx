@@ -1,13 +1,13 @@
 import "./App.css";
-import { LoginStatus, useBankID } from "bankid-react-hook/src";
-import { useState } from "react";
+import { useBankID } from "bankid-react-hook/src";
+import { ChangeEvent, useState } from "react";
 import QRCode from "react-qr-code";
 
 function App() {
   const [baseUrl, setBaseUrl] = useState<string>("https://foo.com/api");
   const { data, start, cancel, errorMessage, loginStatus } = useBankID(baseUrl);
 
-  const onChangeBaseUrl = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onChangeBaseUrl = (e: ChangeEvent<HTMLInputElement>) => {
     const urlPattern = /https?:\/\/(\w+:?\w*)?(\S+)(:\d+)?(\/|\/([\w#!:.?+=&%\-/]))?/;
     if (!urlPattern.test(e.target.value)) {
       setBaseUrl("https://foo.com/api");
@@ -29,7 +29,7 @@ function App() {
       ) : (
         <div>Waiting for qr...</div>
       )}
-      Login status: {LoginStatus[loginStatus]}
+      Login status: {loginStatus}
       {data.userData ? (
         <div>
           {data.userData.personalNumber} {data.userData.name}
@@ -37,7 +37,7 @@ function App() {
       ) : (
         <div>Waiting for user data...</div>
       )}
-      {start && <button onClick={start}>Authenticate</button>}
+      {start && <button onClick={() => start()}>Authenticate</button>}
       {cancel && <button onClick={cancel}>Cancel</button>}
       {errorMessage && <div>Error: {errorMessage}</div>}
     </>

@@ -4,6 +4,7 @@
 
 A React hook for using the Swedish BankID.
 * Simplifies using the BankID API.
+* No dependencies 
 * Polls using correct intervals - 1s for qr code, 2s for collect.
 * Supports animated QR code.
 * Includes mocked API, demo and tests.

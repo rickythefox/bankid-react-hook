@@ -1,10 +1,12 @@
-export enum LoginStatus {
-  None,
-  Starting,
-  Polling,
-  UserSign,
-  Complete,
-  Failed,
+export enum Status {
+  None = "None",
+  Starting = "Starting",
+  Started = "Started",
+  Continuing = "Continuing",
+  Polling = "Polling",
+  UserSign = "UserSign",
+  Complete = "Complete",
+  Failed = "Failed",
+  Cancelling = "Cancelling",
+  Cancelled = "Cancelled",
 }
-
-export type Fetcher = (url: string) => Promise<any>;

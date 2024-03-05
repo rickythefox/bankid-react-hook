@@ -14,10 +14,9 @@ import {
   resetCounts,
   setCollectedCount,
 } from "../../../mocks/mockApi";
-import { LoginStatus, useBankID } from "../src";
+import { Status, useBankID } from "../src";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { setupServer } from "msw/node";
-import { mutate } from "swr";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 let server: ReturnType<typeof setupServer>;
@@ -32,9 +31,6 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-  // Clear SWR cache
-  void mutate(Boolean, undefined, false);
-
   vi.useFakeTimers({
     toFake: [
       "setTimeout",
@@ -75,23 +71,23 @@ describe("useBankID", () => {
     await act(() => result.current.start!());
 
     // Can't start login while logging in
-    expect(await result.current.start()).toBeFalsy();
+    expect(result.current.start()).toBeFalsy();
 
     // Gets an orderRef, autoStartToken and qr code
     await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
     expect(result.current.data.autoStartToken).toBeTruthy();
-    expect(result.current.data.qr).toBeTruthy();
+    expect(result.current.data.qr).toEqual("qr-initial");
 
     // Gets a qr code 2 seconds later
-    act(() => void vi.advanceTimersByTime(2000));
-    await waitFor(() => expect(result.current.data.qr).toBeTruthy());
+    act(() => void vi.advanceTimersByTime(1900));
+    await waitFor(() => expect(result.current.data.qr).toEqual("qr-1"));
 
-    expect(result.current.loginStatus).toEqual(LoginStatus.Polling);
+    expect(result.current.loginStatus).toEqual(Status.Polling);
 
     // Continues polling for qr codes
     for (let i = 0; i < QRS_TO_GENERATE; i++) {
       const lastQr = result.current.data.qr;
-      act(() => void vi.advanceTimersByTime(2000));
+      act(() => void vi.advanceTimersByTime(1000));
       await waitFor(() => expect(result.current.data.qr).not.toBe(lastQr));
     }
 
@@ -99,7 +95,7 @@ describe("useBankID", () => {
     act(() => void vi.advanceTimersByTime(2000));
     await waitFor(() => expect(result.current.data.qr).toBeFalsy());
 
-    expect(result.current.loginStatus).toEqual(LoginStatus.UserSign);
+    expect(result.current.loginStatus).toEqual(Status.UserSign);
 
     // User logs in for a few more collect calls
     for (let i = 0; i < COLLECTS_TO_COMPLETE - QRS_TO_GENERATE + 1; i++) {
@@ -113,7 +109,7 @@ describe("useBankID", () => {
     // Gets JWT token
     await waitFor(() => expect(result.current.data?.userData?.token).toEqual("jwt"));
 
-    expect(result.current.loginStatus).toEqual(LoginStatus.Complete);
+    expect(result.current.loginStatus).toEqual(Status.Complete);
 
     // Can log in again
     expect(result.current.start).toBeTruthy();
@@ -131,16 +127,16 @@ describe("useBankID", () => {
     await act(() => result.current.start!("orderref-123"));
 
     // Can't start login while logging in
-    expect(await result.current.start()).toBeFalsy();
+    expect(result.current.start()).toBeFalsy();
+
+    expect(result.current.loginStatus).toEqual(Status.Polling);
 
     // User is signing, so no more qr codes
-    act(() => void vi.advanceTimersByTime(2000));
+    act(() => void vi.advanceTimersByTime(4000));
     await waitFor(() => expect(result.current.data.qr).toBeFalsy());
 
-    expect(result.current.loginStatus).toEqual(LoginStatus.UserSign);
-
     // User logs in for two more collect calls
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 2; i++) {
       act(() => void vi.advanceTimersByTime(2000));
       await waitFor(() => expect(result.current.data.userData).toBeFalsy());
     }
@@ -151,7 +147,7 @@ describe("useBankID", () => {
     // Gets JWT token
     await waitFor(() => expect(result.current.data?.userData?.token).toEqual("jwt"));
 
-    expect(result.current.loginStatus).toEqual(LoginStatus.Complete);
+    expect(result.current.loginStatus).toEqual(Status.Complete);
 
     // Can log in again
     expect(result.current.start).toBeTruthy();
@@ -165,17 +161,16 @@ describe("useBankID", () => {
     // Wait for orderRef
     await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
 
-    expect(result.current.loginStatus).toEqual(LoginStatus.Starting);
+    expect(result.current.loginStatus).toEqual(Status.Polling);
 
     // Cancel login
     await act(() => result.current.cancel!());
-    expect(result.current.data.orderRef).toBeFalsy();
-    expect(await result.current.cancel()).toBeFalsy();
+    expect(result.current.cancel()).toBeFalsy();
 
     // No qr codes are generated
     act(() => void vi.advanceTimersByTime(2000));
     await waitFor(() => expect(result.current.data.qr).toBeFalsy());
-    expect(result.current.loginStatus).toEqual(LoginStatus.None);
+    expect(result.current.loginStatus).toEqual(Status.Cancelled);
   });
 
   it("provides an error message on authenticate network error", async () => {
@@ -188,7 +183,7 @@ describe("useBankID", () => {
 
     // Wait for error
     await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling authenticate"));
-    expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
+    expect(result.current.loginStatus).toEqual(Status.Failed);
   });
 
   it("provides an error message on authenticate fail", async () => {
@@ -201,7 +196,7 @@ describe("useBankID", () => {
 
     // Wait for error
     await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling authenticate"));
-    expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
+    expect(result.current.loginStatus).toEqual(Status.Failed);
   });
 
   it("provides an error message on collect network error", async () => {
@@ -220,7 +215,7 @@ describe("useBankID", () => {
 
     // Wait for error
     await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling collect"));
-    expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
+    expect(result.current.loginStatus).toEqual(Status.Failed);
   });
 
   it("provides an error message on collect fail", async () => {
@@ -239,7 +234,7 @@ describe("useBankID", () => {
 
     // Wait for error
     await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling collect"));
-    expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
+    expect(result.current.loginStatus).toEqual(Status.Failed);
   });
 
   it("provides an error message on qr network error", async () => {
@@ -258,7 +253,7 @@ describe("useBankID", () => {
 
     // Wait for error
     await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling qr"));
-    expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
+    expect(result.current.loginStatus).toEqual(Status.Failed);
   });
 
   it("provides an error message on qr fail", async () => {
@@ -277,6 +272,6 @@ describe("useBankID", () => {
 
     // Wait for error
     await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling qr"));
-    expect(result.current.loginStatus).toEqual(LoginStatus.Failed);
+    expect(result.current.loginStatus).toEqual(Status.Failed);
   });
 });
