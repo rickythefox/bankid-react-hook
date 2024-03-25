@@ -157,7 +157,7 @@ describe("useBankID", () => {
     const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
-    await act(() => result.current.start!());
+    result.current.start!();
     // Wait for orderRef
     await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
 
@@ -179,7 +179,7 @@ describe("useBankID", () => {
     const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
-    await act(() => result.current.start!());
+    result.current.start!();
 
     // Wait for error
     await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling authenticate"));
@@ -192,7 +192,7 @@ describe("useBankID", () => {
     const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
-    await act(() => result.current.start!());
+    result.current.start!();
 
     // Wait for error
     await waitFor(() => expect(result.current.errorMessage).toMatch("Error when calling authenticate"));
@@ -205,7 +205,7 @@ describe("useBankID", () => {
     const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
-    await act(() => result.current.start!());
+    result.current.start!();
 
     // Gets an orderRef
     await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
@@ -224,7 +224,7 @@ describe("useBankID", () => {
     const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
-    await act(() => result.current.start!());
+    result.current.start!();
 
     // Gets an orderRef
     await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
@@ -243,7 +243,7 @@ describe("useBankID", () => {
     const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
-    await act(() => result.current.start!());
+    result.current.start!();
 
     // Gets an orderRef
     await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());
@@ -262,7 +262,7 @@ describe("useBankID", () => {
     const { result } = renderHook(() => useBankID("https://foo.com/api"));
 
     // Trigger login
-    await act(() => result.current.start!());
+    result.current.start!();
 
     // Gets an orderRef
     await waitFor(() => expect(result.current.data.orderRef).toBeTruthy());

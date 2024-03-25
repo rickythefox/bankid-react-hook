@@ -85,25 +85,28 @@ export function useBankID(baseUrl: string) {
     }
   }, [baseUrl, callAuthenticate, cancelLogin, startCollecting, startGeneratingQrCodes, state]);
 
-  const start = (initialOrderRef: string = "") => {
-    const canStart = [Status.None, Status.Complete, Status.Failed, Status.Cancelled].includes(state.status);
-    if (!canStart) return false;
+  const start = useCallback(
+    (initialOrderRef: string = "") => {
+      const canStart = [Status.None, Status.Complete, Status.Failed, Status.Cancelled].includes(state.status);
+      if (!canStart) return false;
 
-    if (initialOrderRef) {
-      dispatch({ type: ActionType.ContinueLogin, orderRef: initialOrderRef });
-    } else {
-      dispatch({ type: ActionType.StartLogin });
-    }
-    return true;
-  };
+      if (initialOrderRef) {
+        dispatch({ type: ActionType.ContinueLogin, orderRef: initialOrderRef });
+      } else {
+        dispatch({ type: ActionType.StartLogin });
+      }
+      return true;
+    },
+    [state.status],
+  );
 
-  const cancel = () => {
+  const cancel = useCallback(() => {
     const canCancel = [Status.Starting, Status.Started, Status.Polling, Status.UserSign].includes(state.status);
     if (!canCancel) return false;
 
     dispatch({ type: ActionType.CancelLogin });
     return true;
-  };
+  }, [state.status]);
 
   const { orderRef, qr, autoStartToken, userData } = state;
   return {
