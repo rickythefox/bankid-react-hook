@@ -12,6 +12,8 @@ async function fetchData(url: string, options?: RequestInit, searchParams?: Reco
 export function useBankID(baseUrl: string) {
   baseUrl = baseUrl.replace(/\/$/, "");
   const [state, dispatch] = useReducer(reducer, { status: Status.None });
+  const { status, orderRef, qr, userData, autoStartToken, error, errorMessage, token, collectInterval, qrInterval } =
+    state;
 
   const callAuthenticate = useCallback(() => {
     fetchData(`${baseUrl}/authenticate`, { method: "POST" })
@@ -21,7 +23,7 @@ export function useBankID(baseUrl: string) {
 
   const startCollecting = useCallback(() => {
     return setInterval(() => {
-      fetchData(`${baseUrl}/collect`, undefined, { orderRef: state.orderRef })
+      fetchData(`${baseUrl}/collect`, undefined, { orderRef: orderRef })
         .then((data) => {
           if (data.hintCode === "userSign") {
             dispatch({ type: ActionType.UpdateLoginStatus, status: Status.UserSign });
@@ -35,24 +37,24 @@ export function useBankID(baseUrl: string) {
         })
         .catch((error) => dispatch({ type: ActionType.Error, error, errorMessage: "Error when calling collect" }));
     }, 2000);
-  }, [baseUrl, state.orderRef]);
+  }, [baseUrl, orderRef]);
 
   const startGeneratingQrCodes = useCallback(() => {
     return setInterval(() => {
-      fetchData(`${baseUrl}/qr`, undefined, { orderRef: state.orderRef })
+      fetchData(`${baseUrl}/qr`, undefined, { orderRef: orderRef })
         .then((data) => dispatch({ type: ActionType.UpdateQr, qr: data.qr }))
         .catch((error) => dispatch({ type: ActionType.Error, error, errorMessage: "Error when calling qr" }));
     }, 1000);
-  }, [baseUrl, state.orderRef]);
+  }, [baseUrl, orderRef]);
 
   const cancelLogin = useCallback(() => {
-    fetchData(`${baseUrl}/cancel`, { method: "POST" }, { orderRef: state.orderRef })
+    fetchData(`${baseUrl}/cancel`, { method: "POST" }, { orderRef: orderRef })
       .then(() => dispatch({ type: ActionType.UpdateLoginStatus, status: Status.Cancelled }))
       .catch((error) => dispatch({ type: ActionType.Error, error, errorMessage: "Error when calling cancel" }));
-  }, [baseUrl, state.orderRef]);
+  }, [baseUrl, orderRef]);
 
   useEffect(() => {
-    switch (state.status) {
+    switch (status) {
       case Status.Starting:
         callAuthenticate();
         break;
@@ -71,7 +73,7 @@ export function useBankID(baseUrl: string) {
         break;
       }
       case Status.UserSign:
-        clearInterval(state.qrInterval);
+        clearInterval(qrInterval);
         break;
       case Status.Cancelling:
         cancelLogin();
@@ -79,15 +81,24 @@ export function useBankID(baseUrl: string) {
       case Status.Complete:
       case Status.Failed:
       case Status.Cancelled:
-        clearInterval(state.collectInterval);
-        clearInterval(state.qrInterval);
+        clearInterval(collectInterval);
+        clearInterval(qrInterval);
         break;
     }
-  }, [baseUrl, callAuthenticate, cancelLogin, startCollecting, startGeneratingQrCodes, state]);
+  }, [
+    baseUrl,
+    callAuthenticate,
+    startCollecting,
+    startGeneratingQrCodes,
+    cancelLogin,
+    status,
+    collectInterval,
+    qrInterval,
+  ]);
 
+  const canStart = [Status.None, Status.Failed, Status.Cancelled].includes(status);
   const start = useCallback(
     (initialOrderRef: string = "") => {
-      const canStart = [Status.None, Status.Failed, Status.Cancelled].includes(state.status);
       if (!canStart) return false;
 
       if (initialOrderRef) {
@@ -97,32 +108,29 @@ export function useBankID(baseUrl: string) {
       }
       return true;
     },
-    [state.status],
+    [canStart],
   );
 
+  const canCancel = [Status.Starting, Status.Started, Status.Polling, Status.UserSign].includes(status);
   const cancel = useCallback(() => {
-    const canCancel = [Status.Starting, Status.Started, Status.Polling, Status.UserSign].includes(state.status);
     if (!canCancel) return false;
 
     dispatch({ type: ActionType.CancelLogin });
     return true;
-  }, [state.status]);
+  }, [canCancel]);
 
   const reset = useCallback(() => {
     dispatch({ type: ActionType.Reset });
   }, []);
 
-  const data = useMemo(
-    () => ({ orderRef: state.orderRef, qr: state.qr, autoStartToken: state.autoStartToken, userData: state.userData }),
-    [state.orderRef, state.qr, state.autoStartToken, state.userData],
-  );
+  const data = useMemo(() => ({ orderRef, qr, autoStartToken, userData }), [orderRef, qr, autoStartToken, userData]);
 
   return {
     data,
     start,
     cancel,
     reset,
-    loginStatus: state.status,
-    errorMessage: state.errorMessage,
+    loginStatus: status,
+    errorMessage: errorMessage,
   };
 }
