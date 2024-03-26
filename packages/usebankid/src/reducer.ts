@@ -11,6 +11,7 @@ export enum ActionType {
   UpdateUserData = "UpdateUserData",
   Error = "Error",
   CancelLogin = "CancelLogin",
+  Reset = "Reset",
 }
 
 type State = {
@@ -36,7 +37,8 @@ type Action =
   | { type: ActionType.UpdateLoginStatus; status: Status }
   | { type: ActionType.UpdateUserData; data: any; token: any }
   | { type: ActionType.Error; error: any; errorMessage: string }
-  | { type: ActionType.CancelLogin };
+  | { type: ActionType.CancelLogin }
+  | { type: ActionType.Reset };
 
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -86,5 +88,7 @@ export function reducer(state: State, action: Action): State {
       };
     case ActionType.CancelLogin:
       return { ...state, status: Status.Cancelling };
+    case ActionType.Reset:
+      return { status: Status.None };
   }
 }

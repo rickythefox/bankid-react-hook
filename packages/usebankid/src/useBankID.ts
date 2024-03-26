@@ -87,7 +87,7 @@ export function useBankID(baseUrl: string) {
 
   const start = useCallback(
     (initialOrderRef: string = "") => {
-      const canStart = [Status.None, Status.Complete, Status.Failed, Status.Cancelled].includes(state.status);
+      const canStart = [Status.None, Status.Failed, Status.Cancelled].includes(state.status);
       if (!canStart) return false;
 
       if (initialOrderRef) {
@@ -108,11 +108,16 @@ export function useBankID(baseUrl: string) {
     return true;
   }, [state.status]);
 
+  const reset = useCallback(() => {
+    dispatch({ type: ActionType.Reset });
+  }, []);
+
   const { orderRef, qr, autoStartToken, userData } = state;
   return {
     data: { orderRef, qr, autoStartToken, userData },
     start,
     cancel,
+    reset,
     loginStatus: state.status,
     errorMessage: state.errorMessage,
   };
