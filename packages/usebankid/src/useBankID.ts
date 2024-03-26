@@ -1,6 +1,6 @@
 import { ActionType, reducer } from "./reducer";
 import { Status } from "./types";
-import { useCallback, useEffect, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer } from "react";
 
 async function fetchData(url: string, options?: RequestInit, searchParams?: Record<string, any>) {
   const res = await fetch(searchParams ? `${url}?${new URLSearchParams(searchParams).toString()}` : url, {
@@ -112,9 +112,13 @@ export function useBankID(baseUrl: string) {
     dispatch({ type: ActionType.Reset });
   }, []);
 
-  const { orderRef, qr, autoStartToken, userData } = state;
+  const data = useMemo(
+    () => ({ orderRef: state.orderRef, qr: state.qr, autoStartToken: state.autoStartToken, userData: state.userData }),
+    [state.orderRef, state.qr, state.autoStartToken, state.userData],
+  );
+
   return {
-    data: { orderRef, qr, autoStartToken, userData },
+    data,
     start,
     cancel,
     reset,
