@@ -33,6 +33,8 @@ export function useBankID(baseUrl: string) {
               data: data.completionData.user,
               token: data.token,
             });
+          } else if (data.status === "failed") {
+            dispatch({ type: ActionType.UpdateLoginStatus, status: Status.Failed });
           }
         })
         .catch((error) => dispatch({ type: ActionType.Error, error, errorMessage: "Error when calling collect" }));

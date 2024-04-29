@@ -109,3 +109,15 @@ export const qr401Error = [
     return HttpResponse.text("Unauthorized", { status: 401 });
   }),
 ];
+
+export const collectFailedResponse = [
+  http?.get(/.*foo.com\/api\/collect/, (_info) => {
+    return HttpResponse.json({
+      status: "failed",
+      hintCode: "",
+      orderRef: "orderref-123",
+      completionData: null,
+      token: null,
+    });
+  }),
+];

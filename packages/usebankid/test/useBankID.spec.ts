@@ -5,6 +5,7 @@ import {
   authenticate401Error,
   authenticateNetworkError,
   collect401Error,
+  collectFailedResponse,
   collectNetworkError,
   COLLECTS_TO_COMPLETE,
   defaultHandlers,
@@ -151,6 +152,29 @@ describe("useBankID", () => {
 
     // Can log in again
     expect(result.current.start).toBeTruthy();
+  });
+
+  it("failed login signals failure", async () => {
+    server.use(...collectFailedResponse);
+    setCollectedCount(5);
+
+    const { result } = renderHook(() => useBankID("https://foo.com/api"));
+
+    // Trigger login
+    await act(() => result.current.start!("orderref-123"));
+
+    // User is signing, so no more qr codes
+    act(() => void vi.advanceTimersByTime(4000));
+    await waitFor(() => expect(result.current.data.qr).toBeFalsy());
+
+    // User logs in for two more collect calls
+    for (let i = 0; i < 2; i++) {
+      act(() => void vi.advanceTimersByTime(2000));
+      await waitFor(() => expect(result.current.data.userData).toBeFalsy());
+    }
+
+    // Gets failed login status
+    await waitFor(() => expect(result.current.loginStatus).toEqual(Status.Failed));
   });
 
   it("can cancel login", async () => {
